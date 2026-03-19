@@ -1,4 +1,4 @@
-package com.yourname.coreops.di
+package com.example.coreops.di
 
 import android.content.Context
 import androidx.datastore.core.DataStore

@@ -18,7 +18,7 @@ class AuthPreferences @Inject constructor(
 ) {
 
     /**
-     * Об'єкт Companion містить константи — ключі, за якими шукають дані.
+     * Об'єкт Companion містить константи — ключі, за якими ми будемо шукати дані.
      * stringPreferencesKey створює типізований ключ спеціально для рядків (String).
      */
     companion object {
@@ -61,7 +61,7 @@ class AuthPreferences @Inject constructor(
 
     /**
      * Очищає всі токени з DataStore.
-     * Цей метод викликатиметься при виході з акаунта (Logout)
+     * Цей метод викликається при виході з акаунта (Logout)
      * або якщо refresh-токен прострочився (Session Expired).
      */
     suspend fun clearTokens() {

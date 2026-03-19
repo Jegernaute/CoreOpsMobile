@@ -2,6 +2,7 @@ package com.example.coreops.di
 
 import com.example.coreops.data.remote.AuthInterceptor
 import com.example.coreops.data.remote.api.AuthApi
+import com.example.coreops.data.remote.api.ProjectsApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -59,5 +60,11 @@ object NetworkModule {
     fun provideAuthApi(retrofit: Retrofit): AuthApi {
         // Створення реалізації інтерфейсу AuthApi
         return retrofit.create(AuthApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideProjectsApi(retrofit: Retrofit): ProjectsApi {
+        return retrofit.create(ProjectsApi::class.java)
     }
 }
