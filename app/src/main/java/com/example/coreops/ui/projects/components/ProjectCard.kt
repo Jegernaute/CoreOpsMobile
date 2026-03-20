@@ -97,8 +97,8 @@ fun ProjectCard(
                     text = project.description,
                     fontSize = 14.sp,
                     color = CoreOpsTextSecondary,
-                    maxLines = 2, // Обмежуємо 2 рядками, щоб картка не була гігантською
-                    overflow = TextOverflow.Ellipsis // Додає "..." в кінці, якщо текст не влазить
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }

@@ -18,6 +18,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.coreops.ui.navigation.Screen
 import com.example.coreops.ui.projects.ProjectsScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.example.coreops.ui.tasks.ProjectTasksScreen
+import com.example.coreops.ui.tasks.TaskDetailScreen
 
 @Composable
 fun MainScreen() {
@@ -51,7 +55,7 @@ fun MainScreen() {
                             )
                         },
                         label = { Text(text = tab.title) },
-                        selected = currentRoute == tab.route, // Підсвічує, якщо маршрут збігається
+                        selected = currentRoute == tab.route, // Підсвічує якщо маршрут збігається
                         onClick = {
                             navController.navigate(tab.route) {
                                 // Налаштування для правильного бекстеку (щоб кнопка "Назад" працювала логічно)
@@ -84,9 +88,44 @@ fun MainScreen() {
             composable(Screen.BottomTab.Projects.route) {
                 ProjectsScreen(
                     onProjectClick = { projectId ->
-                        // Тут буде логіка переходу на "Деталі проєкту" в майбутньому.
-                        println("Клік по проєкту з ID: $projectId")
+                        // Використовує допоміжну функцію для створення правильного шляху
+                        navController.navigate(Screen.ProjectTasks.createRoute(projectId))
                     }
+                )
+            }
+
+            // Екран задач
+            composable(
+                route = Screen.ProjectTasks.route,
+                arguments = listOf(
+                    navArgument("projectId") {
+                        type = NavType.IntType
+                    }
+                )
+            ) { backStackEntry ->
+                // Витягує ID проєкту з аргументів. Якщо щось піде не так за замовчуванням бере 0
+                val projectId = backStackEntry.arguments?.getInt("projectId") ?: 0
+
+                ProjectTasksScreen(
+                    projectId = projectId,
+                    onNavigateBack = { navController.popBackStack() },
+                    onTaskClick = { taskId ->
+                        // Переходить на екран деталей
+                        navController.navigate(Screen.TaskDetail.createRoute(taskId))
+                    }
+                )
+            }
+
+            // Екран деталей конкретної задачі
+            composable(
+                route = Screen.TaskDetail.route,
+                arguments = listOf(
+                    navArgument("taskId") { type = NavType.IntType }
+                )
+            ) { backStackEntry ->
+
+                TaskDetailScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 

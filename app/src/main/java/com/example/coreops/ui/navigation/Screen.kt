@@ -42,4 +42,20 @@ sealed class Screen(val route: String) {
             icon = Icons.Outlined.Person
         )
     }
+    // --- Маршрути з параметрами (Вкладені екрани) ---
+
+    // Маршрут-шаблон: "project_tasks/{projectId}"
+    object ProjectTasks : Screen("project_tasks/{projectId}") {
+        // Допоміжна функція для створення реального посилання (наприклад, "project_tasks/5")
+        fun createRoute(projectId: Int): String {
+            return "project_tasks/$projectId"
+        }
+    }
+
+    // Маршрут-шаблон: "task_detail/{taskId}"
+    object TaskDetail : Screen("task_detail/{taskId}") {
+        fun createRoute(taskId: Int): String {
+            return "task_detail/$taskId"
+        }
+    }
 }

@@ -6,7 +6,7 @@ import com.example.coreops.domain.repository.ProjectRepository
 import javax.inject.Inject
 
 /**
- * Реалізація репозиторію. Саме тут відбувається фізичний похід у мережу.
+ * Фізична реалізація репозиторію, яка ходить у мережу за задачами.
  */
 class ProjectRepositoryImpl @Inject constructor(
     private val api: ProjectsApi
@@ -14,12 +14,12 @@ class ProjectRepositoryImpl @Inject constructor(
 
     override suspend fun getProjects(): Result<List<ProjectDto>> {
         return try {
-            // Робимо запит до API
+            // Робить запит до API
             val response = api.getProjects()
-            // Якщо все ок, загортаємо список проєктів (results) в Result.success
+            // Якщо все ок, загортає список проєктів (results) в Result.success
             Result.success(response.results)
         } catch (e: Exception) {
-            // Якщо сталася помилка (немає інтернету, 404, 500 тощо), повертаємо Result.failure
+            // Якщо сталася помилка (немає інтернету, 404, 500 тощо), повертає Result.failure
             Result.failure(e)
         }
     }

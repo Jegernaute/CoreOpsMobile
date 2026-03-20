@@ -40,10 +40,10 @@ fun LoginScreen(
 ) {
     val authState by viewModel.authState.collectAsState()
 
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    val email by viewModel.email.collectAsState()
+    val password by viewModel.password.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
-    var rememberMe by remember { mutableStateOf(false) }
+    val rememberMe by viewModel.rememberMe.collectAsState()
 
     LaunchedEffect(authState) {
         if (authState is AuthState.Success) {
@@ -124,7 +124,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { email = it },
+                    onValueChange = { viewModel.onEmailChange(it) },
                     placeholder = { Text("vash@email.com", color = CoreOpsTextSecondary, fontSize = 16.sp) },
                     leadingIcon = {
                         Icon(Icons.Outlined.Email, contentDescription = "Email Icon", tint = CoreOpsTextSecondary, modifier = Modifier.size(20.dp))
@@ -153,7 +153,7 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedTextField(
                     value = password,
-                    onValueChange = { password = it },
+                    onValueChange = { viewModel.onPasswordChange(it) },
                     placeholder = { Text("Введіть пароль", color = CoreOpsTextSecondary, fontSize = 16.sp) },
                     leadingIcon = {
                         Icon(Icons.Outlined.Lock, contentDescription = "Lock Icon", tint = CoreOpsTextSecondary, modifier = Modifier.size(20.dp))
@@ -198,7 +198,7 @@ fun LoginScreen(
                         // Кастомний чекбокс
                         Checkbox(
                             checked = rememberMe,
-                            onCheckedChange = { rememberMe = it },
+                            onCheckedChange = { viewModel.onRememberMeChange(it) },
                             modifier = Modifier.size(20.dp),
                             colors = CheckboxDefaults.colors(
                                 checkedColor = CoreOpsPrimary,
@@ -233,7 +233,7 @@ fun LoginScreen(
 
                 // --- 4. Головна кнопка ---
                 Button(
-                    onClick = { viewModel.login(email, password) },
+                    onClick = { viewModel.login() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),

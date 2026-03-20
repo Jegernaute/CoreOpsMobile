@@ -94,7 +94,7 @@ fun ProjectsScreen(
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp) // Відстань між картками
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             items(currentState.projects) { project ->
                                 ProjectCard(

@@ -18,12 +18,14 @@ class AuthPreferences @Inject constructor(
 ) {
 
     /**
-     * Об'єкт Companion містить константи — ключі, за якими ми будемо шукати дані.
+     * Об'єкт Companion містить константи — ключі, за якими шукаються дані.
      * stringPreferencesKey створює типізований ключ спеціально для рядків (String).
      */
     companion object {
         private val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
         private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
+        val SAVED_EMAIL_KEY = stringPreferencesKey("saved_email")
+        val SAVED_PASSWORD_KEY = stringPreferencesKey("saved_password")
     }
 
     /**
@@ -68,6 +70,35 @@ class AuthPreferences @Inject constructor(
         dataStore.edit { preferences ->
             preferences.remove(ACCESS_TOKEN_KEY)
             preferences.remove(REFRESH_TOKEN_KEY)
+            // Якщо треба видаляти дані для входу розкоментувати:
+            // preferences.remove(SAVED_EMAIL_KEY)
+            // preferences.remove(SAVED_PASSWORD_KEY)
+        }
+    }
+
+    // Читання збереженого email
+    val savedEmail: Flow<String?> = dataStore.data.map { preferences ->
+        preferences[SAVED_EMAIL_KEY]
+    }
+
+    // Читання збереженого пароля
+    val savedPassword: Flow<String?> = dataStore.data.map { preferences ->
+        preferences[SAVED_PASSWORD_KEY]
+    }
+
+    // Збереження email та пароля одночасно
+    suspend fun saveCredentials(email: String, password: String) {
+        dataStore.edit { preferences ->
+            preferences[SAVED_EMAIL_KEY] = email
+            preferences[SAVED_PASSWORD_KEY] = password
+        }
+    }
+
+    // Функція для очищення саме кредосів (наприклад, якщо користувач зняв галочку "Запам'ятати мене")
+    suspend fun clearCredentials() {
+        dataStore.edit { preferences ->
+            preferences.remove(SAVED_EMAIL_KEY)
+            preferences.remove(SAVED_PASSWORD_KEY)
         }
     }
 }
