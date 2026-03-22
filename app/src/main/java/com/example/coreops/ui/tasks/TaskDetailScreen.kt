@@ -1,19 +1,27 @@
 package com.example.coreops.ui.tasks
 
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,7 +37,15 @@ fun TaskDetailScreen(
     viewModel: TaskDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current // Отримує контекст для Toast
 
+    // Слухає одноразові події з ViewModel
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { message ->
+            // Показує спливаюче повідомлення внизу екрану
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -68,12 +84,17 @@ fun TaskDetailScreen(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(16.dp)
                         )
-                        // Тут можна додати кнопку "Спробувати ще раз", якщо потрібно
+                        // Тут можна додати кнопку "Спробувати ще раз" якщо потрібно
                     }
                 }
 
                 is TaskDetailState.Success -> {
-                    TaskDetailContent(task = currentState.task)
+                    TaskDetailContent(
+                        task = currentState.task,
+                        onStatusChange = { newStatus ->
+                            viewModel.updateStatus(newStatus)
+                        }
+                    )
                 }
             }
         }
@@ -81,8 +102,12 @@ fun TaskDetailScreen(
 }
 
 @Composable
-fun TaskDetailContent(task: TaskDto) {
-    // Використовуємо verticalScroll, щоб довгий опис можна було гортати
+fun TaskDetailContent(task: TaskDto,
+                      onStatusChange: (TaskStatus) -> Unit) {
+    // Стан для відкриття меню
+    var expanded by remember { mutableStateOf(false) }
+
+    // Використовує verticalScroll щоб довгий опис можна було гортати
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -99,18 +124,72 @@ fun TaskDetailContent(task: TaskDto) {
         Spacer(modifier = Modifier.height(12.dp))
 
         // --- 2. Бейджі (Статус, Пріоритет, Тип) ---
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             val statusObj = TaskStatus.fromApiValue(task.status)
-            DetailBadge(
-                text = statusObj.displayName,
-                containerColor = getDetailStatusColor(task.status),
-                textColor = Color.White
-            )
+            // Інтерактивний бейдж статусу
+            Box {
+                // Сама кнопка
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFEFF6FF),
+                    contentColor = Color(0xFF2563EB),
+                    modifier = Modifier.clickable { expanded = true }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = statusObj.displayName,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Змінити статус",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                // Випадаюче меню
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(Color.White)
+                ) {
+                    TaskStatus.entries.forEach { status ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = status.displayName,
+                                    color = if (status == statusObj) Color(0xFF2563EB) else Color(0xFF111827),
+                                    fontWeight = if (status == statusObj) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            onClick = {
+                                expanded = false
+                                if (status != statusObj) {
+                                    onStatusChange(status)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
+            //  бейдж пріоритету
             DetailBadge(
                 text = task.priority.uppercase(),
                 containerColor = Color(0xFFF3F4F6),
                 textColor = getDetailPriorityColor(task.priority)
             )
+
+            //  бейдж  типу задачі
             DetailBadge(
                 text = task.taskType,
                 containerColor = Color(0xFFEFF6FF),
@@ -193,9 +272,9 @@ private fun InfoRow(label: String, value: String) {
 }
 
 @Composable
-private fun DetailBadge(text: String, containerColor: Color, textColor: Color) {
+private fun DetailBadge(text: String, containerColor: Color, textColor: Color, modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .background(color = containerColor, shape = RoundedCornerShape(6.dp))
             .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {

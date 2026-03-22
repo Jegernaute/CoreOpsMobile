@@ -33,8 +33,9 @@ class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun updateTaskStatus(taskId: Int, newStatus: String): Result<TaskDto> {
         return try {
-
+            // Формує об'єкт запиту з новим статусом
             val request = TaskStatusUpdateRequest(status = newStatus)
+            // Відправляє PATCH-запит
             val response = api.updateTaskStatus(taskId, request)
             Result.success(response)
         } catch (e: Exception) {
