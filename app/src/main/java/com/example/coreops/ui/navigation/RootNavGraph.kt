@@ -34,7 +34,18 @@ fun RootNavGraph(navController: NavHostController) {
 
         // --- 2. Головний екран (контейнер з нижньою панеллю) ---
         composable(route = Screen.Main.route) {
-            MainScreen()
+            MainScreen(
+                onLogout = {
+                    // Безпечно переходить на екран логіну
+                    navController.navigate(Screen.Login.route) {
+                        // Знищує історію навігації щоб кнопка "Назад" на телефоні
+                        // не повернула  назад у MainScreen після виходу
+                        popUpTo(Screen.Main.route) {
+                            inclusive = true
+                        }
+                    }
+                }
+            )
         }
     }
 }

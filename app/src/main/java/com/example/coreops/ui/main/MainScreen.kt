@@ -1,7 +1,10 @@
 package com.example.coreops.ui.main
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -24,7 +27,7 @@ import com.example.coreops.ui.tasks.ProjectTasksScreen
 import com.example.coreops.ui.tasks.TaskDetailScreen
 
 @Composable
-fun MainScreen() {
+fun MainScreen(onLogout: () -> Unit) {
     // Контролер для внутрішньої навігації (між вкладками)
     val navController = rememberNavController()
 
@@ -136,10 +139,34 @@ fun MainScreen() {
                 }
             }
 
-            // Заглушка: Екран Профілю
+            // Екран Профілю з кнопкою виходу
             composable(Screen.BottomTab.Profile.route) {
+                // Отримує  AuthViewModel
+                val authViewModel: com.example.coreops.ui.auth.AuthViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Екран Профілю", fontSize = 24.sp, color = Color.Gray)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Мій Профіль",
+                            fontSize = 24.sp,
+                            color = androidx.compose.ui.graphics.Color.Black,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        Button(
+                            onClick = {
+                                // 1. Очищає токени
+                                authViewModel.logout()
+                                // 2. Каже графу навігації перемкнути екран
+                                onLogout()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color.Red)
+                        ) {
+                            Text("Вийти з акаунту", color = androidx.compose.ui.graphics.Color.White)
+                        }
+                    }
                 }
             }
         }

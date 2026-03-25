@@ -1,6 +1,8 @@
 package com.example.coreops.data.repository
 
 import com.example.coreops.data.remote.api.TasksApi
+import com.example.coreops.data.remote.models.CommentDto
+import com.example.coreops.data.remote.models.CommentRequest
 import com.example.coreops.data.remote.models.TaskDto
 import com.example.coreops.data.remote.models.TaskStatusUpdateRequest
 import com.example.coreops.domain.repository.TaskRepository
@@ -37,6 +39,29 @@ class TaskRepositoryImpl @Inject constructor(
             val request = TaskStatusUpdateRequest(status = newStatus)
             // Відправляє PATCH-запит
             val response = api.updateTaskStatus(taskId, request)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getTaskComments(taskId: Int): Result<List<CommentDto>> {
+        return try {
+            val response = api.getTaskComments(taskId)
+            Result.success(response.results)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun addTaskComment(taskId: Int, content: String): Result<CommentDto> {
+        return try {
+            val request = CommentRequest(
+                task = taskId,
+                content = content
+            )
+            // Викликаємо API тільки з тілом запиту
+            val response = api.addTaskComment(request)
             Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)

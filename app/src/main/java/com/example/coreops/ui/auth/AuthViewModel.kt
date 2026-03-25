@@ -120,4 +120,22 @@ class AuthViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Виконує вихід з акаунту: очищає локальні токени та скидає стан.
+     */
+    fun logout() {
+        viewModelScope.launch {
+            // 1. Очищає токени та збережені паролі в DataStore (фізична пам'ять)
+            authPreferences.clearTokens()
+
+            // 2. Очищає оперативну пам'ять ViewModel (щоб UI відразу оновився)
+            _email.value = ""
+            _password.value = ""
+            _rememberMe.value = false
+
+            // 3. Скидає стан авторизації до початкового
+            _authState.value = AuthState.Idle
+        }
+    }
 }

@@ -71,8 +71,8 @@ class AuthPreferences @Inject constructor(
             preferences.remove(ACCESS_TOKEN_KEY)
             preferences.remove(REFRESH_TOKEN_KEY)
             // Якщо треба видаляти дані для входу розкоментувати:
-            // preferences.remove(SAVED_EMAIL_KEY)
-            // preferences.remove(SAVED_PASSWORD_KEY)
+             preferences.remove(SAVED_EMAIL_KEY)
+             preferences.remove(SAVED_PASSWORD_KEY)
         }
     }
 
