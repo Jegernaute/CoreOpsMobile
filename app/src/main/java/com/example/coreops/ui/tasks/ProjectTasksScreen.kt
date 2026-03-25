@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add // Не забудь цей імпорт!
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,34 +20,35 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.coreops.data.remote.models.TaskDto
 import com.example.coreops.ui.tasks.components.TaskCard
 
-// 1. STATEFUL ЕКРАН (Підключений до ViewModel)
+// STATEFUL ЕКРАН
 @Composable
 fun ProjectTasksScreen(
     projectId: Int,
     viewModel: ProjectTasksViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
-    onTaskClick: (Int) -> Unit
+    onTaskClick: (Int) -> Unit,
+    onCreateTaskClick: () -> Unit
 ) {
-    // Підписка на поточний стан
     val state by viewModel.state.collectAsState()
 
     ProjectTasksContent(
         state = state,
         onNavigateBack = onNavigateBack,
-        onTaskClick = onTaskClick
+        onTaskClick = onTaskClick,
+        onCreateTaskClick = onCreateTaskClick
     )
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectTasksContent(
     state: ProjectTasksState,
     onNavigateBack: () -> Unit,
-    onTaskClick: (Int) -> Unit
+    onTaskClick: (Int) -> Unit,
+    onCreateTaskClick: () -> Unit
 ) {
     Scaffold(
-        containerColor = Color(0xFFF3F4F6), // Світло-сірий фон
+        containerColor = Color(0xFFF3F4F6),
         topBar = {
             TopAppBar(
                 title = {
@@ -70,8 +72,19 @@ fun ProjectTasksContent(
                     containerColor = Color(0xFFF3F4F6)
                 )
             )
+        },
+
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onCreateTaskClick,
+                containerColor = Color(0xFF2563EB),
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Додати задачу")
+            }
         }
     ) { paddingValues ->
+        // ... ТУТ ДАЛІ ТВІЙ BOX ТА ЛОГІКА СТАНІВ (нічого не міняй)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -160,7 +173,8 @@ fun ProjectTasksScreenPreview() {
         ProjectTasksContent(
             state = ProjectTasksState.Success(mockTasks),
             onNavigateBack = {},
-            onTaskClick = {}
+            onTaskClick = {},
+            onCreateTaskClick = {}
         )
     }
 }

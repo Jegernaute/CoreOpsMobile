@@ -31,7 +31,7 @@ fun MainScreen(onLogout: () -> Unit) {
     // Контролер для внутрішньої навігації (між вкладками)
     val navController = rememberNavController()
 
-    // Отримуємо поточний маршрут, щоб знати, яка вкладка активна
+    // Отримує поточний маршрут щоб знати яка вкладка активна
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -58,15 +58,14 @@ fun MainScreen(onLogout: () -> Unit) {
                             )
                         },
                         label = { Text(text = tab.title) },
-                        selected = currentRoute == tab.route, // Підсвічує якщо маршрут збігається
+                        selected = currentRoute == tab.route,
                         onClick = {
                             navController.navigate(tab.route) {
-                                // Налаштування для правильного бекстеку (щоб кнопка "Назад" працювала логічно)
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
-                                launchSingleTop = true // Уникає створення дублікатів екрану
-                                restoreState = true // Зберігає стан вкладок при перемиканні
+                                launchSingleTop = true
+                                restoreState = true
                             }
                         },
                         colors = NavigationBarItemDefaults.colors(
@@ -91,7 +90,6 @@ fun MainScreen(onLogout: () -> Unit) {
             composable(Screen.BottomTab.Projects.route) {
                 ProjectsScreen(
                     onProjectClick = { projectId ->
-                        // Використовує допоміжну функцію для створення правильного шляху
                         navController.navigate(Screen.ProjectTasks.createRoute(projectId))
                     }
                 )
@@ -106,15 +104,16 @@ fun MainScreen(onLogout: () -> Unit) {
                     }
                 )
             ) { backStackEntry ->
-                // Витягує ID проєкту з аргументів. Якщо щось піде не так за замовчуванням бере 0
                 val projectId = backStackEntry.arguments?.getInt("projectId") ?: 0
 
                 ProjectTasksScreen(
                     projectId = projectId,
                     onNavigateBack = { navController.popBackStack() },
                     onTaskClick = { taskId ->
-                        // Переходить на екран деталей
                         navController.navigate(Screen.TaskDetail.createRoute(taskId))
+                    },
+                    onCreateTaskClick = {
+                        navController.navigate(Screen.CreateTask.createRoute(projectId))
                     }
                 )
             }
@@ -137,7 +136,7 @@ fun MainScreen(onLogout: () -> Unit) {
                 com.example.coreops.ui.notifications.NotificationsScreen()
             }
 
-            // Екран Профілю з кнопкою виходу
+            // Екран Профілю
             composable(Screen.BottomTab.Profile.route) {
                 // Отримує  AuthViewModel
                 val authViewModel: com.example.coreops.ui.auth.AuthViewModel = androidx.hilt.navigation.compose.hiltViewModel()
@@ -155,9 +154,7 @@ fun MainScreen(onLogout: () -> Unit) {
 
                         Button(
                             onClick = {
-                                // 1. Очищає токени
                                 authViewModel.logout()
-                                // 2. Каже графу навігації перемкнути екран
                                 onLogout()
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color.Red)
@@ -166,6 +163,23 @@ fun MainScreen(onLogout: () -> Unit) {
                         }
                     }
                 }
+            }
+
+            composable(
+                route = Screen.CreateTask.route,
+                arguments = listOf(
+                    navArgument("projectId") { type = NavType.IntType }
+                )
+            ) { backStackEntry ->
+                val projectId = backStackEntry.arguments?.getInt("projectId") ?: 0
+
+                com.example.coreops.ui.tasks.CreateTaskScreen(
+                    projectId = projectId,
+                    onNavigateBack = { navController.popBackStack() },
+                    onTaskCreated = {
+                        navController.popBackStack()
+                    }
+                )
             }
         }
     }

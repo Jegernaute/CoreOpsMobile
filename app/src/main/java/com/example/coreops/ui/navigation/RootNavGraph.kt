@@ -2,8 +2,10 @@ package com.example.coreops.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.example.coreops.ui.auth.LoginScreen
 import com.example.coreops.ui.main.MainScreen
 
@@ -44,6 +46,32 @@ fun RootNavGraph(navController: NavHostController) {
                             inclusive = true
                         }
                     }
+                }
+            )
+        }
+
+        // --- Екран створення нової задачі ---
+        composable(
+            route = Screen.CreateTask.route,
+            arguments = listOf(
+                navArgument("projectId") {
+                    type = NavType.IntType
+                }
+            )
+        ) { backStackEntry ->
+            // Витягуємо ID проєкту з аргументів
+            val projectId = backStackEntry.arguments?.getInt("projectId") ?: 0
+
+            // Викликаємо екран створення (його ми створимо в наступній дії)
+            com.example.coreops.ui.tasks.CreateTaskScreen(
+                projectId = projectId,
+                onNavigateBack = {
+                    // Повертаємося назад при скасуванні
+                    navController.popBackStack()
+                },
+                onTaskCreated = {
+                    // Повертаємося на попередній екран після успішного створення
+                    navController.popBackStack()
                 }
             )
         }

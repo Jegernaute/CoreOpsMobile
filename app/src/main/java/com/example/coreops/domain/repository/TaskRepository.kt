@@ -12,4 +12,5 @@ interface TaskRepository {
     suspend fun updateTaskStatus(taskId: Int, newStatus: String): Result<TaskDto>
     suspend fun getTaskComments(taskId: Int): Result<List<CommentDto>>
     suspend fun addTaskComment(taskId: Int, content: String): Result<CommentDto>
+    suspend fun createTask(request: com.example.coreops.data.remote.models.CreateTaskRequest): Result<TaskDto>
 }

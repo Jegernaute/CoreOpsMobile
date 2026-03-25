@@ -67,4 +67,13 @@ class TaskRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    override suspend fun createTask(request: com.example.coreops.data.remote.models.CreateTaskRequest): Result<com.example.coreops.data.remote.models.TaskDto> {
+        return try {
+            val response = api.createTask(request)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

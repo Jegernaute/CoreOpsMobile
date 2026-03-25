@@ -58,4 +58,12 @@ interface TasksApi {
     suspend fun addTaskComment(
         @Body request: CommentRequest
     ): CommentDto
+
+    /**
+     * Створення нової задачі.
+     */
+    @POST("api/v1/tasks/")
+    suspend fun createTask(
+        @Body request: com.example.coreops.data.remote.models.CreateTaskRequest
+    ): TaskDto
 }

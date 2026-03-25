@@ -46,7 +46,6 @@ sealed class Screen(val route: String) {
 
     // Маршрут-шаблон: "project_tasks/{projectId}"
     object ProjectTasks : Screen("project_tasks/{projectId}") {
-        // Допоміжна функція для створення реального посилання (наприклад, "project_tasks/5")
         fun createRoute(projectId: Int): String {
             return "project_tasks/$projectId"
         }
@@ -57,5 +56,10 @@ sealed class Screen(val route: String) {
         fun createRoute(taskId: Int): String {
             return "task_detail/$taskId"
         }
+    }
+
+    // Маршрут для екрану створення задачі (приймає ID проєкту)
+    object CreateTask : Screen("create_task/{projectId}") {
+        fun createRoute(projectId: Int) = "create_task/$projectId"
     }
 }
