@@ -134,9 +134,7 @@ fun MainScreen(onLogout: () -> Unit) {
 
             // Заглушка: Екран Сповіщень
             composable(Screen.BottomTab.Notifications.route) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Екран Сповіщень", fontSize = 24.sp, color = Color.Gray)
-                }
+                com.example.coreops.ui.notifications.NotificationsScreen()
             }
 
             // Екран Профілю з кнопкою виходу

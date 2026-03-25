@@ -30,4 +30,10 @@ abstract class RepositoryModule {
     abstract fun bindTaskRepository(
         taskRepositoryImpl: TaskRepositoryImpl
     ): TaskRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNotificationRepository(
+        notificationRepositoryImpl: com.example.coreops.data.repository.NotificationRepositoryImpl
+    ): com.example.coreops.domain.repository.NotificationRepository
 }
