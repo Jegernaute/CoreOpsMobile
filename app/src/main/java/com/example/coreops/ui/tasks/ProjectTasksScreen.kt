@@ -6,102 +6,161 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.coreops.data.remote.models.TaskDto
 import com.example.coreops.ui.tasks.components.TaskCard
+
+// 1. STATEFUL ЕКРАН (Підключений до ViewModel)
+@Composable
+fun ProjectTasksScreen(
+    projectId: Int,
+    viewModel: ProjectTasksViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit,
+    onTaskClick: (Int) -> Unit
+) {
+    // Підписка на поточний стан
+    val state by viewModel.state.collectAsState()
+
+    ProjectTasksContent(
+        state = state,
+        onNavigateBack = onNavigateBack,
+        onTaskClick = onTaskClick
+    )
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProjectTasksScreen(
-    projectId: Int, // Залишаємо для можливого використання в TopAppBar
+fun ProjectTasksContent(
+    state: ProjectTasksState,
     onNavigateBack: () -> Unit,
-    onTaskClick: (Int) -> Unit,
-    viewModel: ProjectTasksViewModel = hiltViewModel() // Інжектимо ViewModel
+    onTaskClick: (Int) -> Unit
 ) {
-    // Підписуємося на стан
-    val state by viewModel.state.collectAsState()
-
     Scaffold(
+        containerColor = Color(0xFFF3F4F6), // Світло-сірий фон
         topBar = {
             TopAppBar(
-                title = { Text("Задачі", fontWeight = FontWeight.SemiBold) },
+                title = {
+                    Text(
+                        text = "Задачі проєкту",
+                        color = Color.Black,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Назад",
+                            tint = Color.Black
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFFF3F4F6)
+                )
             )
-        },
-        containerColor = Color(0xFFF3F4F6)
-    ) { innerPadding ->
-
+        }
+    ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(paddingValues)
         ) {
-            when (val currentState = state) {
+            // Обробка станів
+            when (state) {
                 is ProjectTasksState.Loading -> {
                     CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = Color(0xFF2563EB)
+                        color = Color(0xFF2563EB),
+                        modifier = Modifier.align(Alignment.Center)
                     )
                 }
 
-                is ProjectTasksState.Success -> {
-                    if (currentState.tasks.isEmpty()) {
+                is ProjectTasksState.Error -> {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Text(
-                            text = "У цьому проєкті ще немає задач.\nЧас створити першу!",
-                            modifier = Modifier.align(Alignment.Center),
-                            color = Color(0xFF6B7280),
-                            textAlign = TextAlign.Center
+                            text = state.message,
+                            color = Color.Red,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
+                }
+
+                is ProjectTasksState.Success -> {
+                    val tasks = state.tasks
+
+                    if (tasks.isEmpty()) {
+                        Text(
+                            text = "У цьому проєкті поки немає задач 📝",
+                            color = Color.Gray,
+                            fontSize = 16.sp,
+                            modifier = Modifier.align(Alignment.Center)
                         )
                     } else {
                         LazyColumn(
-                            contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(currentState.tasks) { task ->
+                            items(tasks) { task ->
                                 TaskCard(
                                     task = task,
-                                    onClick = {
-                                        onTaskClick(task.id)
-                                    },
+                                    onClick = { onTaskClick(task.id) },
                                     onStatusChange = { newStatus ->
-                                        // Викликає метод з ViewModel
-                                        viewModel.changeTaskStatus(task.id, newStatus)
+                                        // Заглушка:  реалізую цей запит на бекенд у наступних кроках
+                                        println("Зміна статусу на: $newStatus")
                                     }
                                 )
                             }
                         }
                     }
                 }
-
-                is ProjectTasksState.Error -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = currentState.message,
-                            color = MaterialTheme.colorScheme.error,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                        Button(onClick = { viewModel.loadTasks(projectId) }) {
-                            Text("Спробувати ще раз")
-                        }
-                    }
-                }
             }
         }
+    }
+}
+
+
+@Preview(showBackground = true)
+@Composable
+fun ProjectTasksScreenPreview() {
+    val mockTasks = listOf(
+        TaskDto(
+            id = 1,
+            title = "Налаштувати БД",
+            description = "Створити таблиці",
+            status = "todo",
+            priority = "high",
+            taskType = "task",
+            assigneeName = "Іван",
+            reporterName = "Адмін",
+            projectName = "Project Alpha",
+            dueDate = "Завтра",
+            estimatedHours = 5f
+        )
+    )
+
+    MaterialTheme {
+        ProjectTasksContent(
+            state = ProjectTasksState.Success(mockTasks),
+            onNavigateBack = {},
+            onTaskClick = {}
+        )
     }
 }

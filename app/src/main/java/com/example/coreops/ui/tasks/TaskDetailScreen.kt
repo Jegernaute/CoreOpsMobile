@@ -1,99 +1,94 @@
 package com.example.coreops.ui.tasks
 
-import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.coreops.data.remote.models.TaskDto
-import com.example.coreops.domain.model.TaskStatus
 
-@OptIn(ExperimentalMaterial3Api::class)
+// 1. STATEFUL ЕКРАН (Підключений до ViewModel)
 @Composable
 fun TaskDetailScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: TaskDetailViewModel = hiltViewModel()
+    viewModel: TaskDetailViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit
 ) {
+    // Підписка на поточний стан
     val state by viewModel.state.collectAsState()
-    val context = LocalContext.current // Отримує контекст для Toast
 
-    // Слухає одноразові події з ViewModel
-    LaunchedEffect(Unit) {
-        viewModel.uiEvent.collect { message ->
-            // Показує спливаюче повідомлення внизу екрану
-            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+    TaskDetailContent(
+        state = state,
+        onNavigateBack = onNavigateBack,
+        onStatusChange = { newStatus ->
+            // Викликаємо функцію з ViewModel для відправки на бекенд
+            viewModel.updateStatus(newStatus)
         }
-    }
+    )
+}
+
+// 2. STATELESS КОНТЕНТ
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TaskDetailContent(
+    state: TaskDetailState,
+    onNavigateBack: () -> Unit,
+    onStatusChange: (String) -> Unit
+) {
     Scaffold(
+        containerColor = Color(0xFFF3F4F6), // Світло-сірий фон
         topBar = {
             TopAppBar(
-                title = { Text("Деталі задачі", fontWeight = FontWeight.SemiBold) },
+                title = { Text("Деталі задачі", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFFF3F4F6)
+                )
             )
-        },
-        containerColor = Color(0xFFF3F4F6) // Базовий фон додатку
+        }
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when (val currentState = state) {
+            // Обробка станів
+            when (state) {
                 is TaskDetailState.Loading -> {
                     CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = Color(0xFF2563EB)
+                        color = Color(0xFF2563EB),
+                        modifier = Modifier.align(Alignment.Center)
                     )
                 }
 
                 is TaskDetailState.Error -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = currentState.message,
-                            color = MaterialTheme.colorScheme.error,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                        // Тут можна додати кнопку "Спробувати ще раз" якщо потрібно
-                    }
+                    Text(
+                        text = state.message,
+                        color = Color.Red,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(16.dp)
+                    )
                 }
 
                 is TaskDetailState.Success -> {
-                    TaskDetailContent(
-                        task = currentState.task,
-                        onStatusChange = { newStatus ->
-                            viewModel.updateStatus(newStatus)
-                        }
+                    // Передаємо дані у функцію відмальовки деталей
+                    TaskDetailBody(
+                        task = state.task,
+                        onStatusChange = onStatusChange
                     )
                 }
             }
@@ -101,197 +96,127 @@ fun TaskDetailScreen(
     }
 }
 
+// 3. ТІЛО ЕКРАНУ (Малює саму задачу)
 @Composable
-fun TaskDetailContent(task: TaskDto,
-                      onStatusChange: (TaskStatus) -> Unit) {
-    // Стан для відкриття меню
-    var expanded by remember { mutableStateOf(false) }
-
-    // Використовує verticalScroll щоб довгий опис можна було гортати
+fun TaskDetailBody(
+    task: TaskDto,
+    onStatusChange: (String) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- 1. Заголовок ---
+        // Заголовок
         Text(
             text = task.title,
-            fontSize = 22.sp,
+            fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF111827)
+            color = Color.Black
         )
-        Spacer(modifier = Modifier.height(12.dp))
 
-        // --- 2. Бейджі (Статус, Пріоритет, Тип) ---
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val statusObj = TaskStatus.fromApiValue(task.status)
-            // Інтерактивний бейдж статусу
-            Box {
-                // Сама кнопка
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFEFF6FF),
-                    contentColor = Color(0xFF2563EB),
-                    modifier = Modifier.clickable { expanded = true }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = statusObj.displayName,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Змінити статус",
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
+        // Dropdown для зміни статусу
+        StatusDropdown(
+            currentStatus = task.status,
+            onStatusChange = onStatusChange
+        )
 
-                // Випадаюче меню
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    modifier = Modifier.background(Color.White)
-                ) {
-                    TaskStatus.entries.forEach { status ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = status.displayName,
-                                    color = if (status == statusObj) Color(0xFF2563EB) else Color(0xFF111827),
-                                    fontWeight = if (status == statusObj) FontWeight.Bold else FontWeight.Normal
-                                )
-                            },
-                            onClick = {
-                                expanded = false
-                                if (status != statusObj) {
-                                    onStatusChange(status)
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-
-            //  бейдж пріоритету
-            DetailBadge(
-                text = task.priority.uppercase(),
-                containerColor = Color(0xFFF3F4F6),
-                textColor = getDetailPriorityColor(task.priority)
-            )
-
-            //  бейдж  типу задачі
-            DetailBadge(
-                text = task.taskType,
-                containerColor = Color(0xFFEFF6FF),
-                textColor = Color(0xFF2563EB)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // --- 3. Інформаційна картка (Люди та Дати) ---
+        // Блок з деталями (на білому фоні)
         Card(
             colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(12.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                InfoRow(label = "Проєкт", value = task.projectName)
-                Divider(color = Color(0xFFF3F4F6), modifier = Modifier.padding(vertical = 8.dp))
+                Text("Опис:", fontWeight = FontWeight.Bold, color = Color.Gray, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = task.description ?: "Опис відсутній", color = Color.Black)
 
-                InfoRow(label = "Виконавець", value = task.assigneeName ?: "Не призначено")
-                Divider(color = Color(0xFFF3F4F6), modifier = Modifier.padding(vertical = 8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = Color(0xFFE5E7EB))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                InfoRow(label = "Автор", value = task.reporterName)
-
-                // Виводимо дати і години, тільки якщо вони є
-                if (task.dueDate != null) {
-                    Divider(color = Color(0xFFF3F4F6), modifier = Modifier.padding(vertical = 8.dp))
-                    InfoRow(label = "Дедлайн", value = task.dueDate)
-                }
-                if (task.estimatedHours != null) {
-                    Divider(color = Color(0xFFF3F4F6), modifier = Modifier.padding(vertical = 8.dp))
-                    InfoRow(label = "Оцінка часу", value = "${task.estimatedHours} год")
-                }
+                // Інші дані
+                DetailRow(label = "Проєкт:", value = task.projectName)
+                DetailRow(label = "Виконавець:", value = task.assigneeName ?: "Не призначено")
+                DetailRow(label = "Автор:", value = task.reporterName)
+                DetailRow(label = "Пріоритет:", value = task.priority.uppercase())
+                DetailRow(label = "Дедлайн:", value = task.dueDate ?: "Не вказано")
             }
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // --- 4. Опис задачі ---
-        Text(
-            text = "Опис",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF111827)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(12.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = if (!task.description.isNullOrBlank()) task.description else "Опис відсутній.",
-                modifier = Modifier.padding(16.dp),
-                color = if (!task.description.isNullOrBlank()) Color(0xFF374151) else Color(0xFF9CA3AF),
-                fontSize = 15.sp,
-                lineHeight = 22.sp
-            )
-        }
-
-        // Відступ знизу
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
-// --- Допоміжні компоненти ---
-
+// Допоміжний рядок для деталей
 @Composable
-private fun InfoRow(label: String, value: String) {
+fun DetailRow(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = label, color = Color(0xFF6B7280), fontSize = 14.sp)
-        Text(text = value, color = Color(0xFF111827), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(text = label, color = Color.Gray, fontSize = 14.sp)
+        Text(text = value, color = Color.Black, fontWeight = FontWeight.Medium, fontSize = 14.sp)
     }
 }
 
+// 4. КОМПОНЕНТ DROPDOWN MENU ДЛЯ СТАТУСУ
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DetailBadge(text: String, containerColor: Color, textColor: Color, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .background(color = containerColor, shape = RoundedCornerShape(6.dp))
-            .padding(horizontal = 10.dp, vertical = 6.dp)
+fun StatusDropdown(
+    currentStatus: String,
+    onStatusChange: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    // Словник статусів: Ключ для бекенду -> Текст для UI
+    val statuses = listOf(
+        "todo" to "До виконання",
+        "in_progress" to "В процесі",
+        "review" to "На перевірці",
+        "done" to "Готово"
+    )
+
+    // Шукаємо красиву назву для поточного статусу
+    val currentLabel = statuses.find { it.first == currentStatus }?.second ?: currentStatus
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
     ) {
-        Text(text = text, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = textColor)
+        OutlinedTextField(
+            value = currentLabel,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Статус задачі") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White
+            ),
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(Color.White)
+        ) {
+            statuses.forEach { (backendValue, displayLabel) ->
+                DropdownMenuItem(
+                    text = { Text(displayLabel, color = Color.Black) },
+                    onClick = {
+                        // Відправляємо новий статус у ViewModel
+                        onStatusChange(backendValue)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
-}
-
-private fun getDetailStatusColor(status: String): Color = when (status) {
-    "to_do" -> Color(0xFF6B7280)
-    "in_progress" -> Color(0xFFF59E0B)
-    "done" -> Color(0xFF10B981)
-    else -> Color(0xFF6B7280)
-}
-
-private fun getDetailPriorityColor(priority: String): Color = when (priority) {
-    "high", "critical" -> Color(0xFFEF4444)
-    "medium" -> Color(0xFFF59E0B)
-    "low" -> Color(0xFF10B981)
-    else -> Color(0xFF6B7280)
 }
