@@ -98,14 +98,14 @@ class AuthViewModel @Inject constructor(
 
                 if (response.isSuccessful && response.body() != null) {
                     val tokens = response.body()!!
-                    // 1. Збереження токенів
+                    // Збереження токенів
                     authPreferences.saveTokens(tokens.access, tokens.refresh)
 
-                    // 2. Логіка "Запам'ятати мене"
+                    // Логіка Запам'ятати мене
                     if (_rememberMe.value) {
                         authPreferences.saveCredentials(currentEmail, currentPassword)
                     } else {
-                        // Якщо галочка знята —  стираються старі збережені дані
+                        // Якщо галочка знята стираються старі збережені дані
                         authPreferences.clearCredentials()
                     }
 
@@ -119,6 +119,47 @@ class AuthViewModel @Inject constructor(
                 _authState.value = AuthState.Error("Невідома помилка: ${e.localizedMessage}")
             }
         }
+    }
+
+    // --- Стан для екрану реєстрації ---
+    private val _registerState = MutableStateFlow<AuthState>(AuthState.Idle)
+    val registerState: StateFlow<AuthState> = _registerState.asStateFlow()
+
+    /**
+     * Відправляє дані нового користувача на сервер.
+     */
+    fun register(request: com.example.coreops.data.remote.models.RegisterRequest) {
+        viewModelScope.launch {
+            _registerState.value = AuthState.Loading
+
+            try {
+                // Відправляє запит
+                api.register(request)
+
+                // Якщо не вилетіло Exception (код 200/201) значить реєстрація успішна
+                _registerState.value = AuthState.Success
+
+            } catch (e: HttpException) {
+                // Сервер повернув помилку (4xx або 5xx).
+                if (e.code() == 400) {
+                    _registerState.value = AuthState.Error("Помилка: Невірні дані або користувач з таким Email вже існує")
+                } else {
+                    _registerState.value = AuthState.Error("Помилка сервера: ${e.code()}")
+                }
+            } catch (e: IOException) {
+                _registerState.value = AuthState.Error("Помилка підключення до інтернету")
+            } catch (e: Exception) {
+                _registerState.value = AuthState.Error("Невідома помилка: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    /**
+     * Скидає стан реєстрації.
+     * Корисно, коли юзер закриває вікно помилки або повертається на екран логіну.
+     */
+    fun resetRegisterState() {
+        _registerState.value = AuthState.Idle
     }
 
     /**

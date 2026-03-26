@@ -62,4 +62,7 @@ sealed class Screen(val route: String) {
     object CreateTask : Screen("create_task/{projectId}") {
         fun createRoute(projectId: Int) = "create_task/$projectId"
     }
+
+    // Маршрут для екрану реєстрації
+    object Register : Screen("register")
 }

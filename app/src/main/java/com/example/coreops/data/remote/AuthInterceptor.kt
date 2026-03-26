@@ -16,6 +16,15 @@ class AuthInterceptor @Inject constructor(
 ) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
+
+        val request = chain.request()
+        val path = request.url.encodedPath
+
+        //Пропускає запити логіну та реєстрації БЕЗ додавання токену
+        if (path.contains("/auth/jwt/create/") || path.contains("/register/")) {
+            return chain.proceed(request)
+        }
+
         // Отримання токена синхронно за допомогою runBlocking,
         // оскільки Interceptor працює у фоновому потоці і це не заблокує UI.
         val token = runBlocking { authPreferences.getAccessToken().first() }

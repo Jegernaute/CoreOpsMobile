@@ -36,7 +36,8 @@ val CoreOpsBorder = Color(0xFFE5E7EB)
 @Composable
 fun LoginScreen(
     viewModel: AuthViewModel = hiltViewModel(),
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    onNavigateToRegister: () -> Unit
 ) {
     val authState by viewModel.authState.collectAsState()
 
@@ -260,11 +261,11 @@ fun LoginScreen(
             Text(text = "Немає акаунту?", fontSize = 14.sp, color = CoreOpsTextSecondary)
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Зверніться до адміністратора",
+                text = "Зареєструватися",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = CoreOpsPrimary,
-                modifier = Modifier.clickable {}
+                modifier = Modifier.clickable { onNavigateToRegister() }
             )
         }
     }
