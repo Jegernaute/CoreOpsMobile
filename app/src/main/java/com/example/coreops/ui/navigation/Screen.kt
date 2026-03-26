@@ -1,6 +1,7 @@
 package com.example.coreops.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
@@ -30,6 +31,12 @@ sealed class Screen(val route: String) {
             icon = Icons.Outlined.Folder
         )
 
+        object MyTasks : BottomTab(
+            route = "my_tasks",
+            title = "Мої задачі",
+            icon = Icons.Outlined.CheckCircle
+        )
+
         object Notifications : BottomTab(
             route = "notifications",
             title = "Сповіщення",
@@ -52,9 +59,9 @@ sealed class Screen(val route: String) {
     }
 
     // Маршрут-шаблон: "task_detail/{taskId}"
-    object TaskDetail : Screen("task_detail/{taskId}") {
+    object TaskDetail : Screen("task_details/{taskId}") {
         fun createRoute(taskId: Int): String {
-            return "task_detail/$taskId"
+            return "task_details/$taskId"
         }
     }
 
@@ -65,4 +72,5 @@ sealed class Screen(val route: String) {
 
     // Маршрут для екрану реєстрації
     object Register : Screen("register")
+
 }

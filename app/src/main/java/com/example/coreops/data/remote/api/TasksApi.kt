@@ -23,6 +23,10 @@ interface TasksApi {
         @Query("project") projectId: Int // Retrofit перетворить це на ?project=ID
     ): PaginatedResponse<TaskDto>
 
+    // всі доступні задачі відображає
+    @GET("api/v1/tasks/")
+    suspend fun getAllMyTasks(): PaginatedResponse<TaskDto>
+
     /**
      * Отримання повної інформації про одну задачу за її ID (включаючи коментарі та ресурси).
      */

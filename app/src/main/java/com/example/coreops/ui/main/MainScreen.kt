@@ -38,6 +38,7 @@ fun MainScreen(onLogout: () -> Unit) {
     // Список вкладок з класу Screen
     val bottomTabs = listOf(
         Screen.BottomTab.Projects,
+        Screen.BottomTab.MyTasks,
         Screen.BottomTab.Notifications,
         Screen.BottomTab.Profile
     )
@@ -60,12 +61,23 @@ fun MainScreen(onLogout: () -> Unit) {
                         label = { Text(text = tab.title) },
                         selected = currentRoute == tab.route,
                         onClick = {
-                            navController.navigate(tab.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            val currentRoute = navBackStackEntry?.destination?.route
+
+                            val isProjectsFlow = currentRoute == "projects" ||
+                                    currentRoute?.startsWith("project_tasks") == true ||
+                                    currentRoute?.startsWith("create_task") == true ||
+                                    currentRoute?.startsWith("task_details") == true
+
+                            if (tab.route == "projects" && isProjectsFlow) {
+                                navController.popBackStack(route = "projects", inclusive = false)
+                            } else {
+                                navController.navigate(tab.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
                         },
                         colors = NavigationBarItemDefaults.colors(
@@ -83,7 +95,7 @@ fun MainScreen(onLogout: () -> Unit) {
         // NavHost відповідає за зміну контенту (екранів)
         NavHost(
             navController = navController,
-            startDestination = Screen.BottomTab.Projects.route,
+            startDestination = Screen.BottomTab.MyTasks.route,
             modifier = Modifier.padding(innerPadding)
         ) {
             //Екран Проєктів
@@ -95,7 +107,16 @@ fun MainScreen(onLogout: () -> Unit) {
                 )
             }
 
-            // Екран задач
+            // Екран всіх задач
+            composable(Screen.BottomTab.MyTasks.route) {
+                com.example.coreops.ui.tasks.MyTasksScreen(
+                    onTaskClick = { taskId ->
+                        navController.navigate(Screen.TaskDetail.createRoute(taskId))
+                    }
+                )
+            }
+
+           // Екран задач проєкту
             composable(
                 route = Screen.ProjectTasks.route,
                 arguments = listOf(
@@ -131,7 +152,7 @@ fun MainScreen(onLogout: () -> Unit) {
                 )
             }
 
-            // Заглушка: Екран Сповіщень
+            // Екран Сповіщень
             composable(Screen.BottomTab.Notifications.route) {
                 com.example.coreops.ui.notifications.NotificationsScreen()
             }

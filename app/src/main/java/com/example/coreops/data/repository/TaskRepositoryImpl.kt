@@ -3,6 +3,7 @@ package com.example.coreops.data.repository
 import com.example.coreops.data.remote.api.TasksApi
 import com.example.coreops.data.remote.models.CommentDto
 import com.example.coreops.data.remote.models.CommentRequest
+import com.example.coreops.data.remote.models.PaginatedResponse
 import com.example.coreops.data.remote.models.TaskDto
 import com.example.coreops.data.remote.models.TaskStatusUpdateRequest
 import com.example.coreops.domain.repository.TaskRepository
@@ -72,6 +73,21 @@ class TaskRepositoryImpl @Inject constructor(
         return try {
             val response = api.createTask(request)
             Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getAllMyTasks(): Result<List<TaskDto>> {
+        return try {
+            val response = api.getAllMyTasks()
+
+            Result.success(response.results)
+
+        } catch (e: retrofit2.HttpException) {
+            Result.failure(Exception("Помилка сервера: ${e.code()}"))
+        } catch (e: java.io.IOException) {
+            Result.failure(Exception("Помилка підключення до інтернету"))
         } catch (e: Exception) {
             Result.failure(e)
         }
