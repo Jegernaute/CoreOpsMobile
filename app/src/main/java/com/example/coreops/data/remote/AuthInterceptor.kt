@@ -21,7 +21,7 @@ class AuthInterceptor @Inject constructor(
         val path = request.url.encodedPath
 
         //Пропускає запити логіну та реєстрації БЕЗ додавання токену
-        if (path.contains("/auth/jwt/create/") || path.contains("/register/")) {
+        if (path.contains("/token/") || path.contains("/register/") || path.contains("/refresh/")) {
             return chain.proceed(request)
         }
 

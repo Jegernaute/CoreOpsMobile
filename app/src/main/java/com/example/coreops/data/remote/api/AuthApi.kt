@@ -4,6 +4,9 @@ import com.example.coreops.data.remote.models.LoginRequest
 import com.example.coreops.data.remote.models.LoginResponse
 import com.example.coreops.data.remote.models.RegisterRequest
 import com.example.coreops.data.remote.models.RegisterResponse
+import com.example.coreops.data.remote.models.TokenRefreshRequest
+import com.example.coreops.data.remote.models.TokenRefreshResponse
+import retrofit2.Call
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST
@@ -24,4 +27,8 @@ interface AuthApi {
         @Body request: RegisterRequest
     ): RegisterResponse
 
+    @POST("api/v1/users/token/refresh/")
+    fun refreshToken(
+        @Body request: TokenRefreshRequest
+    ): Call<TokenRefreshResponse>
 }
