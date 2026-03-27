@@ -90,7 +90,9 @@ fun NotificationsContent(
                             items(notifications) { notif ->
                                 NotificationItem(
                                     notification = notif,
-                                    onClick = { onNotificationClick(notif.id) }
+                                    onClick = { if (!notif.isRead) {
+                                        onNotificationClick(notif.id)
+                                    } }
                                 )
                             }
                         }

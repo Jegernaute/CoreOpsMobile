@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,17 +25,26 @@ import com.example.coreops.ui.navigation.Screen
 import com.example.coreops.ui.projects.ProjectsScreen
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.coreops.ui.notifications.NotificationState
+import com.example.coreops.ui.notifications.NotificationsViewModel
 import com.example.coreops.ui.tasks.ProjectTasksScreen
 import com.example.coreops.ui.tasks.TaskDetailScreen
 
 @Composable
-fun MainScreen(onLogout: () -> Unit) {
+fun MainScreen(onLogout: () -> Unit, notificationsViewModel: NotificationsViewModel = hiltViewModel()) {
     // Контролер для внутрішньої навігації (між вкладками)
     val navController = rememberNavController()
 
     // Отримує поточний маршрут щоб знати яка вкладка активна
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    val notifState by notificationsViewModel.state.collectAsState()
+    val unreadCount = if (notifState is NotificationState.Success) {
+        (notifState as NotificationState.Success).notifications.count { !it.isRead }
+    } else {
+        0
+    }
 
     // Список вкладок з класу Screen
     val bottomTabs = listOf(
@@ -54,12 +65,16 @@ fun MainScreen(onLogout: () -> Unit) {
                     NavigationBarItem(
                         icon = {
                             if (tab.route == Screen.BottomTab.Notifications.route) {
-                                BadgedBox(
-                                    badge = {
-                                        Badge()
-                                        // Badge { Text("3") }
+
+                                if (unreadCount > 0) {
+                                    BadgedBox(
+                                        badge = {
+                                            Badge { Text(unreadCount.toString()) }
+                                        }
+                                    ) {
+                                        Icon(imageVector = tab.icon, contentDescription = tab.title)
                                     }
-                                ) {
+                                } else {
                                     Icon(imageVector = tab.icon, contentDescription = tab.title)
                                 }
                             } else {
@@ -162,7 +177,9 @@ fun MainScreen(onLogout: () -> Unit) {
 
             // Екран Сповіщень
             composable(Screen.BottomTab.Notifications.route) {
-                com.example.coreops.ui.notifications.NotificationsScreen()
+                com.example.coreops.ui.notifications.NotificationsScreen(
+                    viewModel = notificationsViewModel
+                )
             }
 
             // Екран Профілю
