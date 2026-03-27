@@ -5,11 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.example.coreops.data.remote.models.NotificationDto
 import com.example.coreops.domain.repository.NotificationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.coreops.domain.TaskSyncManager
 
 // Стан екрану сповіщень
 sealed class NotificationState {
@@ -20,20 +22,29 @@ sealed class NotificationState {
 
 @HiltViewModel
 class NotificationsViewModel @Inject constructor(
-    private val repository: NotificationRepository
+    private val repository: NotificationRepository,
+    private val syncManager: TaskSyncManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<NotificationState>(NotificationState.Loading)
     val state: StateFlow<NotificationState> = _state.asStateFlow()
 
     init {
-        // При відкритті екрану одразу вантажить дані
         loadNotifications()
+
+        viewModelScope.launch {
+            syncManager.serverUpdates.collect {
+                kotlinx.coroutines.delay(2000)
+                loadNotifications()
+            }
+        }
     }
 
     fun loadNotifications() {
         viewModelScope.launch {
-            _state.value = NotificationState.Loading
+            if (_state.value !is NotificationState.Success) {
+                _state.value = NotificationState.Loading
+            }
 
             val result = repository.getNotifications()
 
@@ -41,7 +52,10 @@ class NotificationsViewModel @Inject constructor(
                 _state.value = NotificationState.Success(notifications)
             }
             result.onFailure { error ->
-                _state.value = NotificationState.Error(error.message ?: "Сталася помилка при завантаженні сповіщень")
+
+                if (_state.value !is NotificationState.Success) {
+                    _state.value = NotificationState.Error(error.message ?: "Помилка завантаження")
+                }
             }
         }
     }

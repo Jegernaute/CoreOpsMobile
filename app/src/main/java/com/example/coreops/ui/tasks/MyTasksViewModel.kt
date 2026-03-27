@@ -85,6 +85,9 @@ class MyTasksViewModel @Inject constructor(
                     }
                     _state.value = MyTasksState.Success(finalTasks)
                 }
+                viewModelScope.launch {
+                    syncManager.triggerServerFetch()
+                }
             }
             result.onFailure { fetchMyTasks() }
         }

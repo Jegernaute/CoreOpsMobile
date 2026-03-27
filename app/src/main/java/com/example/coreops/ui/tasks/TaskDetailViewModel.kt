@@ -92,6 +92,9 @@ class TaskDetailViewModel @Inject constructor(
                 if (stateAfterApi is TaskDetailState.Success) {
                     _state.value = stateAfterApi.copy(task = updatedTaskFromServer)
                 }
+                viewModelScope.launch {
+                    syncManager.triggerServerFetch()
+                }
             }
             result.onFailure { error ->
                 println("Помилка оновлення статусу: ${error.message}")

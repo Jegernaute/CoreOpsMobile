@@ -101,6 +101,9 @@ class ProjectTasksViewModel @Inject constructor(
                     }
                     _state.value = ProjectTasksState.Success(finalTasks)
                 }
+                viewModelScope.launch {
+                    syncManager.triggerServerFetch()
+                }
             }
             result.onFailure { error ->
                 println("Помилка оновлення статусу: ${error.message}")
