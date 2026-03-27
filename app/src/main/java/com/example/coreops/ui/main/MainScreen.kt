@@ -53,10 +53,18 @@ fun MainScreen(onLogout: () -> Unit) {
                 bottomTabs.forEach { tab ->
                     NavigationBarItem(
                         icon = {
-                            Icon(
-                                imageVector = tab.icon,
-                                contentDescription = tab.title
-                            )
+                            if (tab.route == Screen.BottomTab.Notifications.route) {
+                                BadgedBox(
+                                    badge = {
+                                        Badge()
+                                        // Badge { Text("3") }
+                                    }
+                                ) {
+                                    Icon(imageVector = tab.icon, contentDescription = tab.title)
+                                }
+                            } else {
+                                Icon(imageVector = tab.icon, contentDescription = tab.title)
+                            }
                         },
                         label = { Text(text = tab.title) },
                         selected = currentRoute == tab.route,

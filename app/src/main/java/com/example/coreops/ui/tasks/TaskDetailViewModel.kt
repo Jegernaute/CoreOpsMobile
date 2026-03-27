@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.coreops.data.remote.models.CommentDto
 import com.example.coreops.data.remote.models.TaskDto
+import com.example.coreops.domain.TaskSyncManager
 import com.example.coreops.domain.repository.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +23,8 @@ sealed class TaskDetailState {
 @HiltViewModel
 class TaskDetailViewModel @Inject constructor(
     private val repository: TaskRepository,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    private val syncManager: TaskSyncManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<TaskDetailState>(TaskDetailState.Loading)
@@ -66,17 +68,36 @@ class TaskDetailViewModel @Inject constructor(
     fun updateStatus(newStatus: String) {
         if (taskId == null || taskId == 0) return
 
+        // 1. МИТТЄВЕ ОНОВЛЕННЯ UI (Оптимістичний підхід)
+        val currentState = _state.value
+        if (currentState is TaskDetailState.Success) {
+            // Створює копію поточної задачі з новим статусом
+            val optimisticTask = currentState.task.copy(status = newStatus)
+            // Одразу перезаписує StateFlow, щоб Compose миттєво перемалював екран
+            _state.value = currentState.copy(task = optimisticTask)
+        }
+
+        viewModelScope.launch {
+            syncManager.notifyTaskStatusChanged(taskId, newStatus)
+        }
+
+        // 2. ФОНОВИЙ ЗАПИТ НА СЕРВЕР
         viewModelScope.launch {
             val result = repository.updateTaskStatus(taskId, newStatus)
 
-            result.onSuccess { updatedTask ->
-                val currentState = _state.value
-                if (currentState is TaskDetailState.Success) {
-                    _state.value = currentState.copy(task = updatedTask)
+            result.onSuccess { updatedTaskFromServer ->
+                // Коли сервер відповідає успішно (200 OK) може тихо оновити задачу
+                // фінальними даними з бази (наприклад якщо змінився час updated_at)
+                val stateAfterApi = _state.value
+                if (stateAfterApi is TaskDetailState.Success) {
+                    _state.value = stateAfterApi.copy(task = updatedTaskFromServer)
                 }
             }
             result.onFailure { error ->
                 println("Помилка оновлення статусу: ${error.message}")
+                // 3. ВІДКАТ (Rollback): Якщо сталася помилка (наприклад, зник інтернет),
+                // завантажує реальні дані знову щоб повернути правильний статус на екран
+                loadTaskAndComments(taskId)
             }
         }
     }

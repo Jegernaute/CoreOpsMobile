@@ -32,7 +32,7 @@ fun MyTasksScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Мої задачі", fontWeight = FontWeight.Bold) },
+                title = { Text("Задачі", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         },
@@ -126,19 +126,16 @@ fun MyTasksScreen(
                                 contentPadding = PaddingValues(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(filteredTasks) { task ->
+                                items(items = filteredTasks, key = { task -> task.id }) { task ->
                                     TaskCard(
                                         task = task,
-                                        onClick = { onTaskClick(task.id) },
-                                        onStatusChange = { newStatus -> // <--- Картка віддає лише статус
 
-                                            // 1. Беремо ID прямо з поточного об'єкта task
+                                        onClick = { onTaskClick(task.id) },
+                                        onStatusChange = { newStatus ->
+
                                             val currentTaskId = task.id
 
-                                            // 2. Перетворюємо TaskStatus на рядок для API.
-                                            // (Якщо у тебе є вбудована функція типу newStatus.toApiString(),
-                                            // використай її. Якщо ні — ось надійний спосіб):
-                                            val statusStr = when (newStatus.name) { // Припускаю, що TaskStatus - це Enum
+                                            val statusStr = when (newStatus.name) {
                                                 "TODO" -> "todo"
                                                 "IN_PROGRESS" -> "in_progress"
                                                 "REVIEW" -> "review"

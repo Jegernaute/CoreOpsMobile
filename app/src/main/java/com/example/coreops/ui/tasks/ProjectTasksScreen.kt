@@ -84,7 +84,6 @@ fun ProjectTasksContent(
             }
         }
     ) { paddingValues ->
-        // ... ТУТ ДАЛІ ТВІЙ BOX ТА ЛОГІКА СТАНІВ (нічого не міняй)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -131,7 +130,7 @@ fun ProjectTasksContent(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(tasks) { task ->
+                            items(items =  tasks,key = { task -> task.id }) { task ->
                                 TaskCard(
                                     task = task,
                                     onClick = { onTaskClick(task.id) },

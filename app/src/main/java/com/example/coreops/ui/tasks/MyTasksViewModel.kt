@@ -3,6 +3,7 @@ package com.example.coreops.ui.tasks
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.coreops.data.remote.models.TaskDto
+import com.example.coreops.domain.TaskSyncManager
 import com.example.coreops.domain.repository.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,8 @@ sealed class MyTasksState {
 
 @HiltViewModel
 class MyTasksViewModel @Inject constructor(
-    private val repository: TaskRepository
+    private val repository: TaskRepository,
+    private val syncManager: TaskSyncManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<MyTasksState>(MyTasksState.Loading)
@@ -27,6 +29,18 @@ class MyTasksViewModel @Inject constructor(
 
     init {
         fetchMyTasks()
+
+        viewModelScope.launch {
+            syncManager.taskUpdates.collect { (updatedTaskId, newStatus) ->
+                val currentState = _state.value
+                if (currentState is MyTasksState.Success) {
+                    val updatedList = currentState.tasks.map { task ->
+                        if (task.id == updatedTaskId) task.copy(status = newStatus) else task
+                    }
+                    _state.value = MyTasksState.Success(updatedList)
+                }
+            }
+        }
     }
 
     fun fetchMyTasks() {
@@ -48,15 +62,31 @@ class MyTasksViewModel @Inject constructor(
 
     // Функція для зміни статусу задачі
     fun updateTaskStatus(taskId: Int, newStatus: String) {
+        val currentState = _state.value
+        if (currentState is MyTasksState.Success) {
+            val updatedTasks = currentState.tasks.map { task ->
+                if (task.id == taskId) task.copy(status = newStatus) else task
+            }
+            _state.value = MyTasksState.Success(updatedTasks)
+        }
+
+        // --- 3. ПОВІДОМЛЯЄ ІНШІ ЕКРАНИ ПРО ЗМІНУ ---
+        viewModelScope.launch {
+            syncManager.notifyTaskStatusChanged(taskId, newStatus)
+        }
+
         viewModelScope.launch {
             val result = repository.updateTaskStatus(taskId, newStatus)
-
-            result.onSuccess {
-                fetchMyTasks()
+            result.onSuccess { updatedTaskFromServer ->
+                val stateAfterApi = _state.value
+                if (stateAfterApi is MyTasksState.Success) {
+                    val finalTasks = stateAfterApi.tasks.map {
+                        if (it.id == taskId) updatedTaskFromServer else it
+                    }
+                    _state.value = MyTasksState.Success(finalTasks)
+                }
             }
-            result.onFailure { error ->
-                println("Помилка оновлення статусу: ${error.message}")
-            }
+            result.onFailure { fetchMyTasks() }
         }
     }
 }
