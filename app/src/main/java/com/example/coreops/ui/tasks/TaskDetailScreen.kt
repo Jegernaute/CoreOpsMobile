@@ -17,7 +17,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.coreops.data.remote.models.CommentDto
 import com.example.coreops.data.remote.models.TaskDto
-
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.Schedule
 @Composable
 fun TaskDetailScreen(
     viewModel: TaskDetailViewModel = hiltViewModel(),
@@ -111,7 +114,7 @@ fun TaskDetailBody(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- БЛОК 1: ДЕТАЛІ ЗАДАЧІ ---
+        // --- БЛОК 1: НАЗВА ТА СТАТУС ---
         Text(
             text = task.title,
             fontSize = 24.sp,
@@ -124,6 +127,68 @@ fun TaskDetailBody(
             onStatusChange = onStatusChange
         )
 
+        // =======================================================
+        // 👇 НОВИЙ БЛОК ПЛАНУВАННЯ (З'являється тільки якщо є дані) 👇
+        // =======================================================
+        if (task.dueDate != null || task.sprint != null || task.estimatedHours != null) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE0F2FE)), // Легкий блакитний фон
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text("Планування", fontWeight = FontWeight.Bold, color = Color(0xFF0284C7), fontSize = 14.sp)
+
+                    // Спринт
+                    if (task.sprint != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.DirectionsRun, contentDescription = "Sprint", modifier = Modifier.size(18.dp), tint = Color(0xFF0284C7))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "Спринт #${task.sprint}", fontSize = 14.sp, color = Color.Black)
+                        }
+                    }
+
+                    // Дедлайн
+                    if (task.dueDate != null) {
+                        val formattedDate = task.dueDate.take(10) // YYYY-MM-DD
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.DateRange, contentDescription = "Deadline", modifier = Modifier.size(18.dp), tint = Color.Red.copy(alpha = 0.8f))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "Дедлайн: $formattedDate", fontSize = 14.sp, color = Color.Black, fontWeight = FontWeight.Medium)
+                        }
+                    }
+
+                    // Оцінка та витрачений час
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        if (task.estimatedHours != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Schedule, contentDescription = "Estimate", modifier = Modifier.size(18.dp), tint = Color.Gray)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = "Оцінка: ${task.estimatedHours} год", fontSize = 14.sp, color = Color.Black)
+                            }
+                        }
+                        if (task.actualHours != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = "Actual", modifier = Modifier.size(18.dp), tint = Color(0xFF10B981))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = "Витрачено: ${task.actualHours} год", fontSize = 14.sp, color = Color.Black)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // =======================================================
+        // 👆 КІНЕЦЬ БЛОКУ ПЛАНУВАННЯ 👆
+        // =======================================================
+
+        // --- БЛОК 2: ОСНОВНІ ДЕТАЛІ ТА ОПИС ---
         Card(
             colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -145,7 +210,7 @@ fun TaskDetailBody(
             }
         }
 
-        // --- БЛОК 2: КОМЕНТАРІ ---
+        // --- БЛОК 3: КОМЕНТАРІ ---
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Коментарі (${comments.size})",

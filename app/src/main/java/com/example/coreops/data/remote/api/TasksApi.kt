@@ -2,6 +2,7 @@ package com.example.coreops.data.remote.api
 
 import com.example.coreops.data.remote.models.CommentDto
 import com.example.coreops.data.remote.models.CommentRequest
+import com.example.coreops.data.remote.models.CreateTaskRequest
 import com.example.coreops.data.remote.models.PaginatedResponse
 import com.example.coreops.data.remote.models.TaskDto
 import com.example.coreops.data.remote.models.TaskStatusUpdateRequest
@@ -68,6 +69,6 @@ interface TasksApi {
      */
     @POST("api/v1/tasks/")
     suspend fun createTask(
-        @Body request: com.example.coreops.data.remote.models.CreateTaskRequest
+        @Body request: CreateTaskRequest
     ): TaskDto
 }

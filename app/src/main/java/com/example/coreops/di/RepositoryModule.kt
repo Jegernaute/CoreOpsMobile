@@ -1,7 +1,9 @@
 package com.example.coreops.di
 
+import com.example.coreops.data.repository.NotificationRepositoryImpl
 import com.example.coreops.data.repository.ProjectRepositoryImpl
 import com.example.coreops.data.repository.TaskRepositoryImpl
+import com.example.coreops.domain.repository.NotificationRepository
 import com.example.coreops.domain.repository.ProjectRepository
 import com.example.coreops.domain.repository.TaskRepository
 import dagger.Binds
@@ -34,6 +36,7 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindNotificationRepository(
-        notificationRepositoryImpl: com.example.coreops.data.repository.NotificationRepositoryImpl
-    ): com.example.coreops.domain.repository.NotificationRepository
+        notificationRepositoryImpl: NotificationRepositoryImpl
+    ): NotificationRepository
+
 }

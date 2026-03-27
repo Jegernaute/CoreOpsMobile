@@ -9,5 +9,12 @@ data class CreateTaskRequest(
     @SerializedName("task_type")
     val taskType: String,
     val priority: String,
-    val status: String = "to_do"
+    val status: String,
+    val assignee: Int? = null,
+
+    @SerializedName("estimated_hours")
+    val estimatedHours: Float? = null,
+
+    @SerializedName("due_date")
+    val dueDate: String? = null
 )

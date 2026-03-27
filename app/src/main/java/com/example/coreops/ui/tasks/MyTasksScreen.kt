@@ -3,6 +3,8 @@ package com.example.coreops.ui.tasks
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -22,7 +24,8 @@ import com.example.coreops.ui.tasks.components.TaskCard
 @Composable
 fun MyTasksScreen(
     viewModel: MyTasksViewModel = hiltViewModel(),
-    onTaskClick: (Int) -> Unit
+    onTaskClick: (Int) -> Unit,
+    onCreateTaskClick: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -35,6 +38,15 @@ fun MyTasksScreen(
                 title = { Text("Задачі", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onCreateTaskClick,
+                containerColor = Color(0xFF2563EB),
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Створити задачу")
+            }
         },
         containerColor = Color(0xFFF9FAFB)
     ) { paddingValues ->

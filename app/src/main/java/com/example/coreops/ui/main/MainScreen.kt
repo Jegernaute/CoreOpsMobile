@@ -84,23 +84,12 @@ fun MainScreen(onLogout: () -> Unit, notificationsViewModel: NotificationsViewMo
                         label = { Text(text = tab.title) },
                         selected = currentRoute == tab.route,
                         onClick = {
-                            val currentRoute = navBackStackEntry?.destination?.route
-
-                            val isProjectsFlow = currentRoute == "projects" ||
-                                    currentRoute?.startsWith("project_tasks") == true ||
-                                    currentRoute?.startsWith("create_task") == true ||
-                                    currentRoute?.startsWith("task_details") == true
-
-                            if (tab.route == "projects" && isProjectsFlow) {
-                                navController.popBackStack(route = "projects", inclusive = false)
-                            } else {
-                                navController.navigate(tab.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
+                            navController.navigate(tab.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = false
                                 }
+                                launchSingleTop = true
+                                restoreState = false
                             }
                         },
                         colors = NavigationBarItemDefaults.colors(
@@ -135,6 +124,9 @@ fun MainScreen(onLogout: () -> Unit, notificationsViewModel: NotificationsViewMo
                 com.example.coreops.ui.tasks.MyTasksScreen(
                     onTaskClick = { taskId ->
                         navController.navigate(Screen.TaskDetail.createRoute(taskId))
+                    },
+                    onCreateTaskClick = {
+                        navController.navigate(Screen.CreateTask.createRoute(0))
                     }
                 )
             }

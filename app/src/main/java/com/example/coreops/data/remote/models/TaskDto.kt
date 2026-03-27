@@ -2,9 +2,7 @@ package com.example.coreops.data.remote.models
 
 import com.google.gson.annotations.SerializedName
 
-/**
- * Data Transfer Object (DTO) для отримання задачі з сервера.
- */
+// 1. Модель для отримання даних (Тут ми видалили зайвий "val task")
 data class TaskDto(
     val id: Int,
     val title: String,
@@ -12,8 +10,6 @@ data class TaskDto(
     val status: String,
     val priority: String,
 
-    // Використовується SerializedName, щоб зберегти Kotlin-стиль (camelCase) для змінних,
-    // але правильно читати JSON від Django (snake_case)
     @SerializedName("task_type")
     val taskType: String,
 
@@ -32,11 +28,14 @@ data class TaskDto(
     @SerializedName("due_date")
     val dueDate: String?,
 
+    val sprint: Int? = null,
+
+    @SerializedName("actual_hours")
+    val actualHours: Float? = null,
+
     val comments: List<TaskCommentDto> = emptyList(),
     val resources: List<TaskResourceDto> = emptyList()
 )
-
-
 data class TaskCommentDto(
     val id: Int,
     @SerializedName("author_name")
