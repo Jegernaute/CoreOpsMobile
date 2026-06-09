@@ -4,15 +4,15 @@ import com.example.coreops.data.remote.api.NotificationsApi
 import com.example.coreops.data.remote.models.NotificationDto
 import com.example.coreops.domain.repository.NotificationRepository
 import javax.inject.Inject
-
+import com.example.coreops.data.remote.models.PaginatedResponse
 class NotificationRepositoryImpl @Inject constructor(
     private val api: NotificationsApi
 ) : NotificationRepository {
 
-    override suspend fun getNotifications(): Result<List<NotificationDto>> {
+    override suspend fun getNotifications(cursor: String?): Result<PaginatedResponse<NotificationDto>> {
         return try {
-            val response = api.getNotifications()
-            Result.success(response.results)
+            val response = api.getNotifications(cursor)
+            Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)
         }

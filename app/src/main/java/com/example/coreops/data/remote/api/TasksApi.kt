@@ -21,12 +21,13 @@ interface TasksApi {
     // Ендпоінт для отримання списку задач конкретного проєкту
     @GET("api/v1/tasks/")
     suspend fun getTasks(
-        @Query("project") projectId: Int // Retrofit перетворить це на ?project=ID
+        @Query("project") projectId: Int,
+        @Query("cursor") cursor: String? = null // Retrofit перетворить це на ?project=ID
     ): PaginatedResponse<TaskDto>
 
     // всі доступні задачі відображає
     @GET("api/v1/tasks/")
-    suspend fun getAllMyTasks(): PaginatedResponse<TaskDto>
+    suspend fun getAllMyTasks(@Query("cursor") cursor: String? = null): PaginatedResponse<TaskDto>
 
     /**
      * Отримання повної інформації про одну задачу за її ID (включаючи коментарі та ресурси).
@@ -52,7 +53,8 @@ interface TasksApi {
      */
     @GET("api/v1/tasks/comments/")
     suspend fun getTaskComments(
-        @Query("task") taskId: Int
+        @Query("task") taskId: Int,
+        @Query("cursor") cursor: String? = null
     ): PaginatedResponse<CommentDto>
 
     /**

@@ -1,5 +1,6 @@
 package com.example.coreops.ui.projects
 
+import android.net.Uri //
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.coreops.data.remote.models.ProjectDto
@@ -16,13 +17,14 @@ import javax.inject.Inject
  */
 sealed interface ProjectsState {
     object Loading : ProjectsState
-    data class Success(val projects: List<ProjectDto>) : ProjectsState
+    // Додано hasMore для підтримки підвантаження нових сторінок
+    data class Success(val projects: List<ProjectDto>, val hasMore: Boolean = false) : ProjectsState
     data class Error(val message: String) : ProjectsState
 }
 
 @HiltViewModel
 class ProjectsViewModel @Inject constructor(
-    private val repository: ProjectRepository // Hilt сам підставить сюди ProjectRepositoryImpl
+    private val repository: ProjectRepository
 ) : ViewModel() {
 
     // Внутрішній стан (який можна змінювати)
@@ -30,23 +32,32 @@ class ProjectsViewModel @Inject constructor(
     // Зовнішній стан для UI (тільки для читання)
     val state: StateFlow<ProjectsState> = _state.asStateFlow()
 
+    // Змінні для керування станом пагінації
+    private var nextCursor: String? = null
+    private var isLoadingMore = false
+
     init {
         // Одразу при відкритті екрану запускає завантаження
         loadProjects()
     }
 
+    // Первинне завантаження або оновлення (Pull-to-Refresh)
     fun loadProjects() {
-        // viewModelScope означає що запит скасується автоматично якщо користувач закриє екран
         viewModelScope.launch {
             _state.value = ProjectsState.Loading
+            nextCursor = null
 
-            // Звертаємося до репозиторію
-            val result = repository.getProjects()
+            // Звертається до репозиторію
+            val result = repository.getProjects(cursor = null)
 
-            // Обробляє результат за допомогою зручної функції fold
+            // Обробляє результат за допомогою  функції fold
             result.fold(
-                onSuccess = { projectsList ->
-                    _state.value = ProjectsState.Success(projectsList)
+                onSuccess = { paginatedResponse ->
+                    nextCursor = extractCursor(paginatedResponse.next)
+                    _state.value = ProjectsState.Success(
+                        projects = paginatedResponse.results,
+                        hasMore = nextCursor != null
+                    )
                 },
                 onFailure = { exception ->
                     _state.value = ProjectsState.Error(
@@ -54,6 +65,43 @@ class ProjectsViewModel @Inject constructor(
                     )
                 }
             )
+        }
+    }
+
+    // Підвантаження наступної сторінки проєктів при скролі вниз
+    fun loadMoreProjects() {
+        if (isLoadingMore || nextCursor == null) return
+
+        val currentState = _state.value
+        if (currentState !is ProjectsState.Success) return
+
+        isLoadingMore = true
+        viewModelScope.launch {
+            repository.getProjects(cursor = nextCursor).fold(
+                onSuccess = { paginatedResponse ->
+                    val accumulatedProjects = currentState.projects + paginatedResponse.results
+                    nextCursor = extractCursor(paginatedResponse.next)
+
+                    _state.value = ProjectsState.Success(
+                        projects = accumulatedProjects,
+                        hasMore = nextCursor != null
+                    )
+                    isLoadingMore = false
+                },
+                onFailure = {
+                    isLoadingMore = false
+                }
+            )
+        }
+    }
+
+    // Допоміжна функція для вирізання токена курсора з рядка URL
+    private fun extractCursor(url: String?): String? {
+        if (url == null) return null
+        return try {
+            Uri.parse(url).getQueryParameter("cursor")
+        } catch (e: Exception) {
+            null
         }
     }
 }

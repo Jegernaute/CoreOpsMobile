@@ -12,14 +12,14 @@ class TaskSyncManager @Inject constructor() {
     val taskUpdates = _taskUpdates.asSharedFlow()
 
     // 2. новий канал (щоб смикати сервер тільки тоді коли дані точно готові)
-    private val _serverUpdates = MutableSharedFlow<Unit>(extraBufferCapacity = 10)
-    val serverUpdates = _serverUpdates.asSharedFlow()
+    private val _serverFetchRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 10)
+    val serverFetchRequests = _serverFetchRequests.asSharedFlow()
 
     suspend fun notifyTaskStatusChanged(taskId: Int, newStatus: String) {
         _taskUpdates.emit(Pair(taskId, newStatus))
     }
 
     suspend fun triggerServerFetch() {
-        _serverUpdates.tryEmit(Unit)
+        _serverFetchRequests.tryEmit(Unit)
     }
 }

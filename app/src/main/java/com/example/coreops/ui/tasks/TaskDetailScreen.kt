@@ -33,7 +33,14 @@ fun TaskDetailScreen(
         state = state,
         isSending = isSending,
         onNavigateBack = onNavigateBack,
-        onStatusChange = { newStatus -> viewModel.updateStatus(newStatus) },
+        onStatusChange = { newStatus ->
+            if (state is TaskDetailState.Success) {
+                viewModel.updateTaskStatus(
+                    taskId = (state as TaskDetailState.Success).task.id,
+                    newStatus = newStatus
+                )
+            }
+        },
         onSendComment = { text -> viewModel.sendComment(text) }
     )
 }

@@ -1,5 +1,6 @@
 package com.example.coreops.ui.tasks
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -36,58 +37,64 @@ class TaskDetailViewModel @Inject constructor(
     private val taskId: Int? = savedStateHandle.get<Int>("taskId")
 
     init {
-        if (taskId != null && taskId != 0) {
-            loadTaskAndComments(taskId)
-        } else {
-            _state.value = TaskDetailState.Error("Помилка: Не вдалося отримати ID задачі з навігації")
-        }
+        taskId?.let { loadTaskAndComments(it) }
     }
 
-    private fun loadTaskAndComments(id: Int) {
+    fun loadTaskAndComments(taskId: Int) {
         viewModelScope.launch {
             _state.value = TaskDetailState.Loading
 
-            val taskResult = repository.getTaskById(id)
-            val commentsResult = repository.getTaskComments(id)
+            val taskResult = repository.getTaskById(taskId)
+            val commentsResult = repository.getTaskComments(taskId, cursor = null)
 
             if (taskResult.isSuccess && commentsResult.isSuccess) {
+                val task = taskResult.getOrThrow()
+                val commentsResponse = commentsResult.getOrThrow()
+
                 _state.value = TaskDetailState.Success(
-                    task = taskResult.getOrNull()!!,
-                    comments = commentsResult.getOrNull()!!
+                    task = task,
+                    comments = commentsResponse.results
                 )
             } else {
-                // Якщо хоча б один впав - показуємо помилку
                 val errorMsg = taskResult.exceptionOrNull()?.message
                     ?: commentsResult.exceptionOrNull()?.message
-                    ?: "Сталася невідома помилка при завантаженні"
+                    ?: "Помилка завантаження даних"
                 _state.value = TaskDetailState.Error(errorMsg)
             }
         }
     }
 
-    fun updateStatus(newStatus: String) {
-        if (taskId == null || taskId == 0) return
+    fun sendComment(content: String) {
+        if (taskId == null || taskId == 0 || content.isBlank()) return
 
-        // 1. МИТТЄВЕ ОНОВЛЕННЯ UI (Оптимістичний підхід)
+        viewModelScope.launch {
+            _isSendingComment.value = true
+            val result = repository.addTaskComment(taskId, content)
+            result.onSuccess { newComment ->
+                val currentState = _state.value
+                if (currentState is TaskDetailState.Success) {
+                    val updatedComments = currentState.comments + newComment
+                    _state.value = currentState.copy(comments = updatedComments)
+                }
+            }
+            _isSendingComment.value = false
+        }
+    }
+
+    fun updateTaskStatus(taskId: Int, newStatus: String) {
         val currentState = _state.value
-        if (currentState is TaskDetailState.Success) {
-            // Створює копію поточної задачі з новим статусом
-            val optimisticTask = currentState.task.copy(status = newStatus)
-            // Одразу перезаписує StateFlow, щоб Compose миттєво перемалював екран
-            _state.value = currentState.copy(task = optimisticTask)
+        if (currentState is TaskDetailState.Success && currentState.task.id == taskId) {
+            _state.value = currentState.copy(task = currentState.task.copy(status = newStatus))
         }
 
         viewModelScope.launch {
             syncManager.notifyTaskStatusChanged(taskId, newStatus)
         }
 
-        // 2. ФОНОВИЙ ЗАПИТ НА СЕРВЕР
         viewModelScope.launch {
             val result = repository.updateTaskStatus(taskId, newStatus)
 
             result.onSuccess { updatedTaskFromServer ->
-                // Коли сервер відповідає успішно (200 OK) може тихо оновити задачу
-                // фінальними даними з бази (наприклад якщо змінився час updated_at)
                 val stateAfterApi = _state.value
                 if (stateAfterApi is TaskDetailState.Success) {
                     _state.value = stateAfterApi.copy(task = updatedTaskFromServer)
@@ -98,36 +105,8 @@ class TaskDetailViewModel @Inject constructor(
             }
             result.onFailure { error ->
                 println("Помилка оновлення статусу: ${error.message}")
-                // 3. ВІДКАТ (Rollback): Якщо сталася помилка (наприклад, зник інтернет),
-                // завантажує реальні дані знову щоб повернути правильний статус на екран
                 loadTaskAndComments(taskId)
             }
-        }
-    }
-
-    /**
-     * Відправка нового коментаря
-     */
-    fun sendComment(content: String) {
-        if (taskId == null || taskId == 0 || content.isBlank()) return
-
-        viewModelScope.launch {
-            _isSendingComment.value = true
-
-            val result = repository.addTaskComment(taskId, content)
-
-            result.onSuccess { newComment ->
-                val currentState = _state.value
-                if (currentState is TaskDetailState.Success) {
-                    val updatedComments = currentState.comments + newComment
-                    _state.value = currentState.copy(comments = updatedComments)
-                }
-            }
-            result.onFailure { error ->
-                println("Помилка відправки коментаря: ${error.message}")
-            }
-
-            _isSendingComment.value = false
         }
     }
 }

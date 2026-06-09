@@ -16,10 +16,10 @@ class TaskRepositoryImpl @Inject constructor(
     private val api: TasksApi
 ) : TaskRepository {
 
-    override suspend fun getTasks(projectId: Int): Result<List<TaskDto>> {
+    override suspend fun getTasks(projectId: Int, cursor: String?): Result<PaginatedResponse<TaskDto>> {
         return try {
-            val response = api.getTasks(projectId)
-            Result.success(response.results) // Витягує сам список із пагінації
+            val response = api.getTasks(projectId, cursor)
+            Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -46,10 +46,10 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getTaskComments(taskId: Int): Result<List<CommentDto>> {
+    override suspend fun getTaskComments(taskId: Int, cursor: String?): Result<PaginatedResponse<CommentDto>> {
         return try {
-            val response = api.getTaskComments(taskId)
-            Result.success(response.results)
+            val response = api.getTaskComments(taskId, cursor)
+            Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -78,11 +78,11 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getAllMyTasks(): Result<List<TaskDto>> {
+    override suspend fun getAllMyTasks(cursor: String?): Result<PaginatedResponse<TaskDto>> {
         return try {
-            val response = api.getAllMyTasks()
+            val response = api.getAllMyTasks(cursor)
 
-            Result.success(response.results)
+            Result.success(response)
 
         } catch (e: retrofit2.HttpException) {
             Result.failure(Exception("Помилка сервера: ${e.code()}"))

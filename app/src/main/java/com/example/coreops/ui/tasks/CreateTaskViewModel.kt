@@ -70,8 +70,8 @@ class CreateTaskViewModel @Inject constructor(
     private fun loadProjects() {
         viewModelScope.launch {
             val result = projectRepository.getProjects()
-            result.onSuccess { projectList ->
-                _projects.value = projectList
+            result.onSuccess { paginatedResponse ->
+                _projects.value = paginatedResponse.results
             }
         }
     }

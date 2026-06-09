@@ -1,5 +1,6 @@
 package com.example.coreops.domain.repository
 
+import com.example.coreops.data.remote.models.PaginatedResponse
 import com.example.coreops.data.remote.models.ProjectDto
 
 /**
@@ -7,5 +8,6 @@ import com.example.coreops.data.remote.models.ProjectDto
  * ViewModel буде спілкуватися тільки з цим контрактом, не знаючи про Retrofit чи API.
  */
 interface ProjectRepository {
-    suspend fun getProjects(): Result<List<ProjectDto>>
+    // Передає cursor і повертаємо повну пагіновану відповідь
+    suspend fun getProjects(cursor: String? = null): Result<PaginatedResponse<ProjectDto>>
 }

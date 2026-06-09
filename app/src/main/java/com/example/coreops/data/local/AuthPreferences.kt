@@ -32,7 +32,7 @@ class AuthPreferences @Inject constructor(
      * Метод для збереження обох токенів після успішної авторизації.
      * @param access - короткостроковий токен для запитів.
      * @param refresh - довгостроковий токен для оновлення access-токена.
-     * Використовуємо `suspend`, оскільки запис у файл — це асинхронна операція.
+     * Використовує `suspend`, оскільки запис у файл — це асинхронна операція.
      */
     suspend fun saveTokens(access: String, refresh: String) {
         dataStore.edit { preferences ->
