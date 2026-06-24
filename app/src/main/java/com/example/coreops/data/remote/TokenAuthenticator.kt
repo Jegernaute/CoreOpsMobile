@@ -4,8 +4,6 @@ import com.example.coreops.data.local.AuthPreferences
 import com.example.coreops.data.remote.api.AuthApi
 import com.example.coreops.data.remote.models.TokenRefreshRequest
 import dagger.Lazy
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
@@ -27,9 +25,8 @@ class TokenAuthenticator @Inject constructor(
             return null
         }
 
-        val refreshToken = runBlocking {
-            authPreferences.getRefreshToken().firstOrNull()
-        }
+        // Синхронне читання
+        val refreshToken = authPreferences.getRefreshToken()
 
         if (refreshToken.isNullOrBlank()) {
             return null
@@ -42,21 +39,16 @@ class TokenAuthenticator @Inject constructor(
 
             if (refreshResponse.isSuccessful && refreshResponse.body() != null) {
                 val newAccessToken = refreshResponse.body()!!.access
-
                 val newRefreshToken = refreshResponse.body()!!.refresh ?: refreshToken
 
-                runBlocking {
-                    authPreferences.saveTokens(newAccessToken, newRefreshToken)
-                }
+                // Збереження миттєво оновить кеш, а запис на диск піде у фоні
+                authPreferences.saveTokens(newAccessToken, newRefreshToken)
 
                 return response.request.newBuilder()
                     .header("Authorization", "Bearer $newAccessToken")
                     .build()
             } else {
-
-                runBlocking {
-                    authPreferences.clearTokens()
-                }
+                authPreferences.clearTokens()
                 return null
             }
         } catch (e: Exception) {

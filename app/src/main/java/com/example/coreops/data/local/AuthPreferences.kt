@@ -1,104 +1,87 @@
 package com.example.coreops.data.local
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import javax.inject.Inject
 
 /**
- * AuthPreferences - це клас, який є обгорткою над DataStore.
- * Його єдина відповідальність (Single Responsibility) — безпечно зберігати,
- * читати та видаляти JWT-токени (access та refresh), які потрібні для доступу до API.
+ * AuthPreferences — безпечне сховище для токенів та облікових даних.
+ * Використовує In-Memory кешування для миттєвого доступу без блокування потоків (I/O).
  */
-class AuthPreferences @Inject constructor(
-    private val dataStore: DataStore<Preferences>
-) {
+class AuthPreferences @Inject constructor(context: Context) {
 
-    /**
-     * Об'єкт Companion містить константи — ключі, за якими шукаються дані.
-     * stringPreferencesKey створює типізований ключ спеціально для рядків (String).
-     */
-    companion object {
-        private val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
-        private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
-        val SAVED_EMAIL_KEY = stringPreferencesKey("saved_email")
-        val SAVED_PASSWORD_KEY = stringPreferencesKey("saved_password")
+    private val prefs: SharedPreferences
+
+    // In-Memory кеш для уникнення постійного читання з файлової системи
+    private var cachedAccessToken: String? = null
+    private var cachedRefreshToken: String? = null
+
+    init {
+        // Створює майстер-ключ для апаратного шифрування
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        prefs = EncryptedSharedPreferences.create(
+            context,
+            "auth_encrypted_preferences",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+
+        // Зчитує дані з диска ЛИШЕ ОДИН РАЗ при старті додатка
+        cachedAccessToken = prefs.getString("access_token", null)
+        cachedRefreshToken = prefs.getString("refresh_token", null)
     }
 
-    /**
-     * Метод для збереження обох токенів після успішної авторизації.
-     * @param access - короткостроковий токен для запитів.
-     * @param refresh - довгостроковий токен для оновлення access-токена.
-     * Використовує `suspend`, оскільки запис у файл — це асинхронна операція.
-     */
-    suspend fun saveTokens(access: String, refresh: String) {
-        dataStore.edit { preferences ->
-            preferences[ACCESS_TOKEN_KEY] = access
-            preferences[REFRESH_TOKEN_KEY] = refresh
-        }
+    // --- СИНХРОННІ МЕТОДИ ДЛЯ ТОКЕНІВ ---
+
+    fun getAccessToken(): String? = cachedAccessToken
+
+    fun getRefreshToken(): String? = cachedRefreshToken
+
+    fun saveTokens(access: String, refresh: String) {
+        cachedAccessToken = access
+        cachedRefreshToken = refresh
+
+        // apply() виконує запис на диск асинхронно у фоні
+        prefs.edit()
+            .putString("access_token", access)
+            .putString("refresh_token", refresh)
+            .apply()
     }
 
-    /**
-     * Повертає потік (Flow) даних з Access токеном.
-     * Flow дозволяє нам реагувати на зміни: якщо токен оновиться,
-     * всі підписники цього Flow автоматично отримають нове значення.
-     */
-    fun getAccessToken(): Flow<String?> {
-        return dataStore.data.map { preferences ->
-            preferences[ACCESS_TOKEN_KEY]
-        }
+    fun clearTokens() {
+        cachedAccessToken = null
+        cachedRefreshToken = null
+        prefs.edit()
+            .remove("access_token")
+            .remove("refresh_token")
+            .remove("saved_email")
+            .remove("saved_password")
+            .apply()
     }
 
-    /**
-     * Повертає потік з Refresh токеном.
-     */
-    fun getRefreshToken(): Flow<String?> {
-        return dataStore.data.map { preferences ->
-            preferences[REFRESH_TOKEN_KEY]
-        }
+    // --- МЕТОДИ ДЛЯ ДАНИХ АВТОРИЗАЦІЇ ---
+
+    fun getSavedEmail(): String? = prefs.getString("saved_email", null)
+
+    fun getSavedPassword(): String? = prefs.getString("saved_password", null)
+
+    fun saveCredentials(email: String, password: String) {
+        prefs.edit()
+            .putString("saved_email", email)
+            .putString("saved_password", password)
+            .apply()
     }
 
-    /**
-     * Очищає всі токени з DataStore.
-     * Цей метод викликається при виході з акаунта (Logout)
-     * або якщо refresh-токен прострочився (Session Expired).
-     */
-    suspend fun clearTokens() {
-        dataStore.edit { preferences ->
-            preferences.remove(ACCESS_TOKEN_KEY)
-            preferences.remove(REFRESH_TOKEN_KEY)
-            // Якщо треба видаляти дані для входу розкоментувати:
-             preferences.remove(SAVED_EMAIL_KEY)
-             preferences.remove(SAVED_PASSWORD_KEY)
-        }
-    }
-
-    // Читання збереженого email
-    val savedEmail: Flow<String?> = dataStore.data.map { preferences ->
-        preferences[SAVED_EMAIL_KEY]
-    }
-
-    // Читання збереженого пароля
-    val savedPassword: Flow<String?> = dataStore.data.map { preferences ->
-        preferences[SAVED_PASSWORD_KEY]
-    }
-
-    // Збереження email та пароля одночасно
-    suspend fun saveCredentials(email: String, password: String) {
-        dataStore.edit { preferences ->
-            preferences[SAVED_EMAIL_KEY] = email
-            preferences[SAVED_PASSWORD_KEY] = password
-        }
-    }
-
-    // Функція для очищення саме кредосів (наприклад, якщо користувач зняв галочку "Запам'ятати мене")
-    suspend fun clearCredentials() {
-        dataStore.edit { preferences ->
-            preferences.remove(SAVED_EMAIL_KEY)
-            preferences.remove(SAVED_PASSWORD_KEY)
-        }
+    fun clearCredentials() {
+        prefs.edit()
+            .remove("saved_email")
+            .remove("saved_password")
+            .apply()
     }
 }

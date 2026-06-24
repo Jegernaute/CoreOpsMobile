@@ -1,12 +1,9 @@
 package com.example.coreops.data.remote
 
 import com.example.coreops.data.local.AuthPreferences
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
-
 /**
  * Перехоплювач мережевих запитів.
  * Призначений для автоматичного підставлення токена авторизації у заголовок запиту.
@@ -20,14 +17,13 @@ class AuthInterceptor @Inject constructor(
         val request = chain.request()
         val path = request.url.encodedPath
 
-        //Пропускає запити логіну та реєстрації БЕЗ додавання токену
+        // Пропускає запити логіну та реєстрації БЕЗ додавання токену
         if (path.contains("/token/") || path.contains("/register/") || path.contains("/refresh/")) {
             return chain.proceed(request)
         }
 
-        // Отримання токена синхронно за допомогою runBlocking,
-        // оскільки Interceptor працює у фоновому потоці і це не заблокує UI.
-        val token = runBlocking { authPreferences.getAccessToken().first() }
+        // Миттєве синхронне читання токена з оперативної пам'яті
+        val token = authPreferences.getAccessToken()
 
         val requestBuilder = chain.request().newBuilder()
 
