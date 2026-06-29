@@ -1,7 +1,5 @@
 package com.example.coreops.ui.projects.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,18 +9,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.coreops.data.remote.models.ProjectDto
-
-// Кольори з нашої дизайн-системи
-private val CoreOpsSurface = Color(0xFFFFFFFF)
-private val CoreOpsTextPrimary = Color(0xFF111827)
-private val CoreOpsTextSecondary = Color(0xFF6B7280)
-private val CoreOpsBorder = Color(0xFFE5E7EB)
-private val CoreOpsPrimary = Color(0xFF2563EB)
 
 @Composable
 fun ProjectCard(
@@ -35,72 +26,88 @@ fun ProjectCard(
             .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CoreOpsSurface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, CoreOpsBorder)
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // --- 1. Верхній рядок: Ключ проєкту та Статус ---
+            // --- 1. Верхній рядок: Назва та Статус ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Бейдж із ключем (наприклад, "ALF")
                 Text(
-                    text = project.key.uppercase(),
-                    fontSize = 12.sp,
+                    text = project.name,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = CoreOpsPrimary,
-                    modifier = Modifier
-                        .background(CoreOpsPrimary.copy(alpha = 0.1f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                    color = Color.Black,
+                    modifier = Modifier.weight(1f)
                 )
 
-                // Динамічний колір статусу
-                val statusColor = when (project.status.lowercase()) {
-                    "active", "активний" -> Color(0xFF10B981)
-                    "completed", "завершено" -> Color(0xFF6B7280)
-                    "on hold", "на паузі" -> Color(0xFFF59E0B)
-                    else -> CoreOpsPrimary
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Мапінг системних статусів у локалізований текст та кольори
+                val (statusText, statusBg, statusColor) = when (project.status.lowercase()) {
+                    "backlog" -> Triple("В планах", Color(0xFFE0F2FE), Color(0xFF0284C7))
+                    "in_progress" -> Triple("В роботі", Color(0xFFFEF3C7), Color(0xFFD97706))
+                    "on_hold" -> Triple("На паузі", Color(0xFFF3E8FF), Color(0xFF7E22CE))
+                    "completed" -> Triple("Завершено", Color(0xFFD1FAE5), Color(0xFF059669))
+                    "archived" -> Triple("Архів", Color(0xFFF3F4F6), Color(0xFF4B5563))
+                    else -> Triple("Невідомо", Color(0xFFF3F4F6), Color(0xFF4B5563))
                 }
 
-                // Бейдж статусу
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = statusBg
+                ) {
+                    Text(
+                        text = statusText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = statusColor,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- 2. Середній рядок: Задачі та Відсоток ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = project.status,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = statusColor,
-                    modifier = Modifier
-                        .border(1.dp, statusColor.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                    text = "${project.activeTasksCount} активних задач",
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+
+                Text(
+                    text = "${(project.progress * 100).toInt()}%",
+                    fontSize = 13.sp,
+                    color = Color.Gray,
+                    fontWeight = FontWeight.Medium
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // --- 2. Головна назва проєкту ---
-            Text(
-                text = project.name,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = CoreOpsTextPrimary
+            // --- 3. Нижній рядок: Смуга прогресу ---
+            LinearProgressIndicator(
+                progress = { project.progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp),
+                color = Color(0xFF2563EB),
+                trackColor = Color(0xFFE5E7EB),
+                strokeCap = StrokeCap.Round
             )
-
-            // --- 3. Опис (показує, тільки якщо він є) ---
-            if (!project.description.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = project.description,
-                    fontSize = 14.sp,
-                    color = CoreOpsTextSecondary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
         }
     }
 }

@@ -9,7 +9,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
@@ -47,19 +46,17 @@ class AuthViewModel @Inject constructor(
     val rememberMe: StateFlow<Boolean> = _rememberMe.asStateFlow()
 
     init {
-        // При створенні ViewModel одразу йде в сейф і дістає кредоси
-        viewModelScope.launch {
-            // firstOrNull() бере значення один раз і зупиняється (не слухає вічно)
-            val savedEmail = authPreferences.savedEmail.firstOrNull()
-            val savedPassword = authPreferences.savedPassword.firstOrNull()
+        // Оскільки AuthPreferences тепер працює синхронно
+        //  більше не потрібні корутини (launch) та firstOrNull()
+        val savedEmail = authPreferences.getSavedEmail()
+        val savedPassword = authPreferences.getSavedPassword()
 
-            if (!savedEmail.isNullOrBlank()) {
-                _email.value = savedEmail
-                _rememberMe.value = true
-            }
-            if (!savedPassword.isNullOrBlank()) {
-                _password.value = savedPassword
-            }
+        if (!savedEmail.isNullOrBlank()) {
+            _email.value = savedEmail
+            _rememberMe.value = true
+        }
+        if (!savedPassword.isNullOrBlank()) {
+            _password.value = savedPassword
         }
     }
 
@@ -110,6 +107,16 @@ class AuthViewModel @Inject constructor(
                     }
 
                     _authState.value = AuthState.Success
+                } else {
+                    // Обробка помилок сервера коли response не successful
+                    when (response.code()) {
+                        401 -> _authState.value = AuthState.Error("Невірний email або пароль")
+                        429 -> _authState.value = AuthState.Error("Забагато спроб. Зачекайте хвилину")
+                        else -> {
+                            val errorBody = response.errorBody()?.string() ?: "Невідома помилка"
+                            _authState.value = AuthState.Error("Помилка ${response.code()}: $errorBody")
+                        }
+                    }
                 }
             } catch (e: HttpException) {
                 _authState.value = AuthState.Error("Помилка сервера: ${e.code()}")
@@ -140,9 +147,11 @@ class AuthViewModel @Inject constructor(
                 _registerState.value = AuthState.Success
 
             } catch (e: HttpException) {
-                // Сервер повернув помилку (4xx або 5xx).
+                // Витягує реальну JSON-відповідь від Django
+                val errorBody = e.response()?.errorBody()?.string() ?: "Невідома помилка валідації"
+
                 if (e.code() == 400) {
-                    _registerState.value = AuthState.Error("Помилка: Невірні дані або користувач з таким Email вже існує")
+                    _registerState.value = AuthState.Error("Сервер каже: $errorBody")
                 } else {
                     _registerState.value = AuthState.Error("Помилка сервера: ${e.code()}")
                 }

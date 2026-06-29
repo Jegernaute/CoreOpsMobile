@@ -61,7 +61,7 @@ class TaskRepositoryImpl @Inject constructor(
                 task = taskId,
                 content = content
             )
-            // Викликаємо API тільки з тілом запиту
+            // Викликає API тільки з тілом запиту
             val response = api.addTaskComment(request)
             Result.success(response)
         } catch (e: Exception) {

@@ -63,7 +63,7 @@ class CreateTaskViewModel @Inject constructor(
     val uiState: StateFlow<CreateTaskState> = _uiState.asStateFlow()
 
     init {
-        // Завантажуємо проєкти ЗАВЖДИ, щоб мати доступ до їхніх учасників (members)
+        // Завантажує проєкти ЗАВЖДИ, щоб мати доступ до їхніх учасників (members)
         loadProjects()
     }
 
@@ -83,7 +83,7 @@ class CreateTaskViewModel @Inject constructor(
 
     fun setProject(projectId: Int) {
         _selectedProjectId.value = projectId
-        _selectedAssigneeId.value = null // СКИДАЄМО виконавця, якщо змінили проєкт
+        _selectedAssigneeId.value = null // СКИДАЄ виконавця, якщо змінили проєкт
         clearError()
     }
 

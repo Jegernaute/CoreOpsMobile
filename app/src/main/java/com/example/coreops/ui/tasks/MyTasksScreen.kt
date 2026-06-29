@@ -155,7 +155,7 @@ fun MyTasksScreen(
                                                 else -> newStatus.name.lowercase()
                                             }
 
-                                            // 3. Відправляємо на бекенд
+                                            // 3. Відправляє на бекенд
                                             viewModel.updateTaskStatus(currentTaskId, statusStr)
                                         }
                                     )

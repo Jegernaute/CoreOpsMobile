@@ -11,7 +11,9 @@ data class ProjectDto(
     val name: String,
     val description: String?,
     val status: String,
-    val members: List<ProjectMemberDto> = emptyList()
+    val members: List<ProjectMemberDto> = emptyList(),
+    val activeTasksCount: Int = 0,
+    val progress: Float = 0f
 )
 
 data class ProjectMemberDto(
