@@ -3,148 +3,304 @@ package com.example.coreops.ui.tasks.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.coreops.data.remote.models.TaskDto
-import com.example.coreops.domain.model.TaskStatus
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskCard(
     task: TaskDto,
-    onClick: () -> Unit,
-    onStatusChange: (TaskStatus) -> Unit // Новий колбек
+    onClick: () -> Unit
 ) {
-    // Стан для відкриття/закриття меню
-    var expanded by remember { mutableStateOf(false) }
-    // Поточний статус через  Enum
-    val currentStatus = TaskStatus.fromApiValue(task.status)
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        onClick = onClick,
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(16.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-            // Заголовок задачі
-            Text(
-                text = task.title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF111827),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            // --- 1. Шапка: Тип задачі, Ключ, Лічильники ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Іконка типу задачі
+                Icon(
+                    imageVector = getTaskTypeIcon(task.taskType),
+                    contentDescription = "Тип",
+                    tint = getTaskTypeColor(task.taskType),
+                    modifier = Modifier.size(20.dp)
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Ідентифікатор (CORE-12)
+                Text(
+                    text = "${task.projectKey}-${task.id}",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Gray
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Лічильники
+                if (task.resourcesCount > 0) {
+                    CounterBadge(icon = Icons.Outlined.AttachFile, count = task.resourcesCount)
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+
+                if (task.commentsCount > 0) {
+                    CounterBadge(icon = Icons.Outlined.ChatBubbleOutline, count = task.commentsCount)
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Рядок з бейджами
+            // --- 2. Тіло: Назва ---
+            Text(
+                text = task.title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- 3. Підвал: Пріоритет, Дата, Аватар ---
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Статус
-                // Інтерактивний статус
-                Box {
-                    TaskBadge(
-                        text = currentStatus.displayName,
-                        containerColor = getStatusColor(task.status),
-                        textColor = Color.White,
-                        modifier = Modifier.clickable { expanded = true } // Відкриває меню
+                // Пріоритет
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .background(getPriorityBgColor(task.priority), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Flag,
+                        contentDescription = "Пріоритет",
+                        tint = getPriorityTextColor(task.priority),
+                        modifier = Modifier.size(14.dp)
                     )
-
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        // Перебирає всі статуси з Enum
-                        TaskStatus.entries.forEach { status ->
-                            DropdownMenuItem(
-                                text = { Text(status.displayName) },
-                                onClick = {
-                                    expanded = false // Ховаємо меню
-                                    // Відправляє запит тільки якщо статус реально змінився
-                                    if (status != currentStatus) {
-                                        onStatusChange(status)
-                                    }
-                                }
-                            )
-                        }
-                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = task.priority.uppercase(),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = getPriorityTextColor(task.priority)
+                    )
                 }
 
-                // Пріоритет
-                TaskBadge(
-                    text = task.priority.uppercase(),
-                    containerColor = Color(0xFFF3F4F6),
-                    textColor = getPriorityColor(task.priority)
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Дата
+                Text(
+                    text = formatDate(task.dueDate),
+                    fontSize = 12.sp,
+                    color = Color.Gray
                 )
 
-                // Тип задачі
-                TaskBadge(
-                    text = task.taskType,
-                    containerColor = Color(0xFFEFF6FF),
-                    textColor = Color(0xFF2563EB)
-                )
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Аватар виконавця (або автора, якщо виконавця немає)
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(Color(0xFFE5E7EB), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = (task.assigneeName ?: task.reporterName).take(1).uppercase(),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF374151)
+                    )
+                }
             }
         }
     }
 }
 
-// --- Допоміжні компоненти для красивого UI ---
-
 @Composable
-private fun TaskBadge(text: String, containerColor: Color, textColor: Color, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .background(color = containerColor, shape = RoundedCornerShape(6.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-
-    ) {
+private fun CounterBadge(icon: ImageVector, count: Int) {
+    val displayCount = if (count > 99) "99+" else count.toString()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color.Gray,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
         Text(
-            text = text,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            color = textColor
+            text = displayCount,
+            fontSize = 12.sp,
+            color = Color.Gray,
+            fontWeight = FontWeight.Medium
         )
     }
 }
 
-// Проста логіка кольорів
-private fun getStatusColor(status: String): Color = when (status) {
-    "to_do" -> Color(0xFF6B7280) // Сірий
-    "in_progress" -> Color(0xFFF59E0B) // Жовтий
-    "done" -> Color(0xFF10B981) // Зелений
-    else -> Color(0xFF6B7280)
+// --- Утиліти мапінгу ---
+
+private fun getTaskTypeIcon(type: String): ImageVector = when (type.lowercase()) {
+    "bug" -> Icons.Outlined.BugReport
+    "feature" -> Icons.Outlined.CheckCircle
+    else -> Icons.Outlined.List
 }
 
-private fun formatStatus(status: String): String = when (status) {
-    "to_do" -> "To Do"
-    "in_progress" -> "In Progress"
-    "done" -> "Done"
-    else -> status
+private fun getTaskTypeColor(type: String): Color = when (type.lowercase()) {
+    "bug" -> Color(0xFFEF4444)
+    "feature" -> Color(0xFF8B5CF6)
+    else -> Color(0xFF3B82F6)
 }
 
-private fun getPriorityColor(priority: String): Color = when (priority) {
-    "high" -> Color(0xFFEF4444) // Червоний
-    "medium" -> Color(0xFFF59E0B) // Оранжевий
-    "low" -> Color(0xFF10B981) // Зелений
-    else -> Color(0xFF6B7280)
+private fun getPriorityBgColor(priority: String): Color = when (priority.lowercase()) {
+    "critical", "high" -> Color(0xFFFEE2E2)
+    "medium" -> Color(0xFFFEF3C7)
+    else -> Color(0xFFF3F4F6)
+}
+
+private fun getPriorityTextColor(priority: String): Color = when (priority.lowercase()) {
+    "critical", "high" -> Color(0xFFDC2626)
+    "medium" -> Color(0xFFD97706)
+    else -> Color(0xFF4B5563)
+}
+
+// НОВА УТИЛІТА ДЛЯ ФОРМАТУВАННЯ ДАТИ
+private fun formatDate(dateString: String?): String {
+    if (dateString.isNullOrBlank()) return "Без дати"
+    return try {
+        val parts = dateString.take(10).split("-")
+        if (parts.size == 3) {
+            val day = parts[2].toInt().toString()
+            val month = when (parts[1]) {
+                "01" -> "січ."
+                "02" -> "лют."
+                "03" -> "бер."
+                "04" -> "квіт."
+                "05" -> "трав."
+                "06" -> "черв."
+                "07" -> "лип."
+                "08" -> "серп."
+                "09" -> "вер."
+                "10" -> "жовт."
+                "11" -> "лист."
+                "12" -> "груд."
+                else -> ""
+            }
+            "$day $month"
+        } else {
+            dateString
+        }
+    } catch (e: Exception) {
+        dateString
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFF3F4F6, name = "1. Bug / Critical / Вкладення")
+@Composable
+fun PreviewTaskCardBug() {
+    val mockTask = TaskDto(
+        id = 12,
+        title = "Критична вразливість в модулі авторизації",
+        description = null,
+        status = "to_do",
+        priority = "critical",
+        taskType = "bug",
+        assigneeName = "Олександр",
+        assigneeAvatar = null,
+        reporterName = "QA",
+        reporterAvatar = null,
+        projectName = "CoreOps",
+        projectKey = "CORE",
+        commentsCount = 14,
+        resourcesCount = 3,
+        estimatedHours = 4f,
+        dueDate = "2026-07-01"
+    )
+    Box(modifier = Modifier.padding(16.dp)) {
+        TaskCard(task = mockTask, onClick = {})
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFF3F4F6, name = "2. Feature / Medium / Без ресурсів")
+@Composable
+fun PreviewTaskCardFeature() {
+    val mockTask = TaskDto(
+        id = 45,
+        title = "Додати підтримку темної теми",
+        description = null,
+        status = "in_progress",
+        priority = "medium",
+        taskType = "feature",
+        assigneeName = null,
+        assigneeAvatar = null,
+        reporterName = "Марія",
+        reporterAvatar = null,
+        projectName = "CoreOps",
+        projectKey = "CORE",
+        commentsCount = 5,
+        resourcesCount = 0,
+        estimatedHours = 12f,
+        dueDate = "2026-07-15"
+    )
+    Box(modifier = Modifier.padding(16.dp)) {
+        TaskCard(task = mockTask, onClick = {})
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFF3F4F6, name = "3. Task / Low / Ліміт лічильника")
+@Composable
+fun PreviewTaskCardTask() {
+    val mockTask = TaskDto(
+        id = 89,
+        title = "Оновити документацію API до версії 2.0",
+        description = null,
+        status = "done",
+        priority = "low",
+        taskType = "task",
+        assigneeName = "Іван",
+        assigneeAvatar = null,
+        reporterName = "Tech Lead",
+        reporterAvatar = null,
+        projectName = "CoreOps",
+        projectKey = "CORE",
+        commentsCount = 105,
+        resourcesCount = 0,
+        estimatedHours = 8f,
+        dueDate = null
+    )
+    Box(modifier = Modifier.padding(16.dp)) {
+        TaskCard(task = mockTask, onClick = {})
+    }
 }

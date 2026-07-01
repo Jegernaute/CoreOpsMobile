@@ -4,6 +4,7 @@ import com.example.coreops.data.remote.api.TasksApi
 import com.example.coreops.data.remote.models.CommentDto
 import com.example.coreops.data.remote.models.CommentRequest
 import com.example.coreops.data.remote.models.PaginatedResponse
+import com.example.coreops.data.remote.models.SprintDto
 import com.example.coreops.data.remote.models.TaskDto
 import com.example.coreops.data.remote.models.TaskStatusUpdateRequest
 import com.example.coreops.domain.repository.TaskRepository
@@ -16,7 +17,10 @@ class TaskRepositoryImpl @Inject constructor(
     private val api: TasksApi
 ) : TaskRepository {
 
-    override suspend fun getTasks(projectId: Int, cursor: String?): Result<PaginatedResponse<TaskDto>> {
+    override suspend fun getTasks(
+        projectId: Int,
+        cursor: String?
+    ): Result<PaginatedResponse<TaskDto>> {
         return try {
             val response = api.getTasks(projectId, cursor)
             Result.success(response)
@@ -46,7 +50,10 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getTaskComments(taskId: Int, cursor: String?): Result<PaginatedResponse<CommentDto>> {
+    override suspend fun getTaskComments(
+        taskId: Int,
+        cursor: String?
+    ): Result<PaginatedResponse<CommentDto>> {
         return try {
             val response = api.getTaskComments(taskId, cursor)
             Result.success(response)
@@ -88,6 +95,17 @@ class TaskRepositoryImpl @Inject constructor(
             Result.failure(Exception("Помилка сервера: ${e.code()}"))
         } catch (e: java.io.IOException) {
             Result.failure(Exception("Помилка підключення до інтернету"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getActiveSprint(projectId: Int): Result<List<SprintDto>> {
+        return try {
+            // Запит з фільтром на активні спринти
+            val response = api.getActiveSprints(projectId = projectId, status = "active")
+
+            Result.success(response.results)
         } catch (e: Exception) {
             Result.failure(e)
         }

@@ -3,6 +3,7 @@ package com.example.coreops.domain.repository
 import com.example.coreops.data.remote.models.CommentDto
 import com.example.coreops.data.remote.models.PaginatedResponse
 import com.example.coreops.data.remote.models.TaskDto
+import com.example.coreops.data.remote.models.SprintDto
 
 /**
  * Контракт для роботи з даними задач.
@@ -17,4 +18,6 @@ interface TaskRepository {
     suspend fun addTaskComment(taskId: Int, content: String): Result<CommentDto>
     suspend fun createTask(request: com.example.coreops.data.remote.models.CreateTaskRequest): Result<TaskDto>
     suspend fun getAllMyTasks(cursor: String? = null): Result<PaginatedResponse<TaskDto>>
+
+    suspend fun getActiveSprint(projectId: Int): Result<List<SprintDto>>
 }

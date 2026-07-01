@@ -55,9 +55,13 @@ class MyTasksViewModel @Inject constructor(
     }
 
     // Первинне завантаження або оновлення списку (Pull-to-Refresh)
-    fun fetchMyTasks() {
+    // Додано параметр isSilent
+    fun fetchMyTasks(isSilent: Boolean = false) {
         viewModelScope.launch {
-            _state.value = MyTasksState.Loading
+            // Блокує жорстке перемальовування
+            if (!isSilent) {
+                _state.value = MyTasksState.Loading
+            }
             nextCursor = null // Скидає курсор при чистому завантаженні
 
             repository.getAllMyTasks(cursor = null).collectResult()

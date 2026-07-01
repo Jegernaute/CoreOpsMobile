@@ -180,13 +180,6 @@ fun TaskDetailBody(
                                 Text(text = "Оцінка: ${task.estimatedHours} год", fontSize = 14.sp, color = Color.Black)
                             }
                         }
-                        if (task.actualHours != null) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = "Actual", modifier = Modifier.size(18.dp), tint = Color(0xFF10B981))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(text = "Витрачено: ${task.actualHours} год", fontSize = 14.sp, color = Color.Black)
-                            }
-                        }
                     }
                 }
             }
@@ -210,7 +203,7 @@ fun TaskDetailBody(
                 HorizontalDivider(color = Color(0xFFE5E7EB))
                 Spacer(modifier = Modifier.height(16.dp))
 
-                DetailRow(label = "Проєкт:", value = task.projectName)
+                DetailRow(label = "Проєкт:", value = "[${task.projectKey}] ${task.projectName}")
                 DetailRow(label = "Виконавець:", value = task.assigneeName ?: "Не призначено")
                 DetailRow(label = "Автор:", value = task.reporterName)
                 DetailRow(label = "Пріоритет:", value = task.priority.uppercase())
@@ -356,7 +349,7 @@ fun StatusDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val statuses = listOf(
-        "todo" to "До виконання",
+        "to_do" to "До виконання",
         "in_progress" to "В процесі",
         "review" to "На перевірці",
         "done" to "Готово"

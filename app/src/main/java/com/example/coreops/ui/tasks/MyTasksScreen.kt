@@ -15,6 +15,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.coreops.ui.tasks.components.TaskCard
 
 
@@ -28,7 +31,20 @@ fun MyTasksScreen(
     onCreateTaskClick: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
+    // СИНХРОНІЗАЦІЯ ДАНИХ: Оновлення при поверненні на екран
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.fetchMyTasks(isSilent = true)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
     val tabs = listOf("Усі", "До виконання", "В роботі", "На перевірці", "Виконано")
     var selectedTabIndex by remember { mutableStateOf(0) }
 
@@ -142,22 +158,7 @@ fun MyTasksScreen(
                                     TaskCard(
                                         task = task,
 
-                                        onClick = { onTaskClick(task.id) },
-                                        onStatusChange = { newStatus ->
-
-                                            val currentTaskId = task.id
-
-                                            val statusStr = when (newStatus.name) {
-                                                "TODO" -> "todo"
-                                                "IN_PROGRESS" -> "in_progress"
-                                                "REVIEW" -> "review"
-                                                "DONE" -> "done"
-                                                else -> newStatus.name.lowercase()
-                                            }
-
-                                            // 3. Відправляє на бекенд
-                                            viewModel.updateTaskStatus(currentTaskId, statusStr)
-                                        }
+                                        onClick = { onTaskClick(task.id) }
                                     )
                                 }
                             }

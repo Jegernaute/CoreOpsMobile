@@ -4,6 +4,7 @@ import com.example.coreops.data.remote.models.CommentDto
 import com.example.coreops.data.remote.models.CommentRequest
 import com.example.coreops.data.remote.models.CreateTaskRequest
 import com.example.coreops.data.remote.models.PaginatedResponse
+import com.example.coreops.data.remote.models.SprintDto
 import com.example.coreops.data.remote.models.TaskDto
 import com.example.coreops.data.remote.models.TaskStatusUpdateRequest
 import retrofit2.http.Body
@@ -73,4 +74,13 @@ interface TasksApi {
     suspend fun createTask(
         @Body request: CreateTaskRequest
     ): TaskDto
+
+    /**
+     * Отримання активних спринтів проєкту.
+     */
+    @GET("api/v1/planning/")
+    suspend fun getActiveSprints(
+        @Query("project") projectId: Int,
+        @Query("status") status: String
+    ): PaginatedResponse<SprintDto>
 }

@@ -61,17 +61,15 @@ fun ProjectsContent(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Заголовок займає весь залишковий простір та центрується всередині нього
             Text(
                 text = "Проєкти",
-                fontSize = 28.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center
             )
 
-            // Група іконок (автоматично притискається вправо завдяки weight(1f) у текста)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)

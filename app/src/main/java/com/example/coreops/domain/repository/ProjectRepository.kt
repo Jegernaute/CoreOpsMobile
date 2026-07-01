@@ -8,6 +8,7 @@ import com.example.coreops.data.remote.models.ProjectDto
  * ViewModel буде спілкуватися тільки з цим контрактом, не знаючи про Retrofit чи API.
  */
 interface ProjectRepository {
-    // Передає cursor і повертаємо повну пагіновану відповідь
+    // Передає cursor і повертає повну пагіновану відповідь
     suspend fun getProjects(cursor: String? = null): Result<PaginatedResponse<ProjectDto>>
+    suspend fun getProjectById(id: Int): Result<ProjectDto>
 }

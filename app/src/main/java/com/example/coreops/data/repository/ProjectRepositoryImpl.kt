@@ -23,4 +23,12 @@ class ProjectRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+    override suspend fun getProjectById(id: Int): Result<ProjectDto> {
+        return try {
+            val response = api.getProjectById(id)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
