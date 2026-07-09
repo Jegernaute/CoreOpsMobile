@@ -4,9 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,7 +19,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.coreops.ui.tasks.components.TaskCard
-
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.outlined.FilterAlt
 
 
 
@@ -28,7 +29,8 @@ import com.example.coreops.ui.tasks.components.TaskCard
 fun MyTasksScreen(
     viewModel: MyTasksViewModel = hiltViewModel(),
     onTaskClick: (Int) -> Unit,
-    onCreateTaskClick: () -> Unit
+    onCreateTaskClick: () -> Unit,
+    onBackClick: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -50,54 +52,79 @@ fun MyTasksScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Задачі", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+            CenterAlignedTopAppBar(
+                title = { Text("Мої задачі", fontSize = 20.sp, fontWeight = FontWeight.SemiBold) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Назад",
+                            modifier = Modifier.size(28.dp),
+                            tint = Color.Black
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* TODO: Логіка фільтрів */ }) {
+                        Icon(
+                            imageVector = Icons.Outlined.FilterAlt,
+                            contentDescription = "Фільтри",
+                            modifier = Modifier.size(28.dp),
+                            tint = Color.Black
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color(0xFFF3F4F6))
             )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onCreateTaskClick,
                 containerColor = Color(0xFF2563EB),
-                contentColor = Color.White
+                contentColor = Color.White,
+                shape = androidx.compose.foundation.shape.CircleShape,
+                modifier = Modifier.size(56.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Створити задачу")
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Додати",
+                    modifier = Modifier.size(28.dp)
+                )
             }
         },
-        containerColor = Color(0xFFF9FAFB)
+        containerColor = Color(0xFFF3F4F6)
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+
             // --- 1. ТАБИ СТАТУСІВ ---
-            ScrollableTabRow(
-                selectedTabIndex = selectedTabIndex,
-                containerColor = Color.White,
-                edgePadding = 16.dp,
-                divider = {},
-                indicator = { tabPositions ->
-                    if (selectedTabIndex < tabPositions.size) {
-                        TabRowDefaults.SecondaryIndicator(
-                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                            color = Color(0xFF2563EB)
+            androidx.compose.foundation.lazy.LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(tabs.size) { index ->
+                    val isSelected = selectedTabIndex == index
+                    Surface(
+                        onClick = { selectedTabIndex = index },
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                        color = if (isSelected) Color(0xFF2563EB) else Color.White,
+                        border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)) else null ,
+                        modifier = Modifier.defaultMinSize(minHeight = 36.dp)
+                    ) {
+                        Text(
+                            text = tabs[index],
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                            color = if (isSelected) Color.White else Color(0xFF4B5563),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
-                }
-            ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTabIndex == index,
-                        onClick = { selectedTabIndex = index },
-                        text = {
-                            Text(
-                                text = title,
-                                color = if (selectedTabIndex == index) Color(0xFF2563EB) else Color.Gray,
-                                fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal
-                            )
-                        }
-                    )
                 }
             }
 
@@ -157,7 +184,7 @@ fun MyTasksScreen(
                                 items(items = filteredTasks, key = { task -> task.id }) { task ->
                                     TaskCard(
                                         task = task,
-
+                                        showProjectName = true,
                                         onClick = { onTaskClick(task.id) }
                                     )
                                 }

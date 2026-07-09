@@ -6,8 +6,11 @@ data class UserDto(
     val id: Int,
     val email: String,
 
-    @SerializedName("full_name")
-    val fullName: String,
+    @SerializedName("first_name")
+    val firstName: String,
+
+    @SerializedName("last_name")
+    val lastName: String,
 
     val avatar: String?,
 
@@ -15,5 +18,12 @@ data class UserDto(
     val jobTitle: String?,
 
     val phone: String?,
-    val telegram: String?
-)
+    val telegram: String?,
+
+    @SerializedName("global_role")
+    val globalRole: String
+) {
+    // Зручна властивість для відображення в UI
+    val fullName: String
+        get() = "$firstName $lastName".trim()
+}

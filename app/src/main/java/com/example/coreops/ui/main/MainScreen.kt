@@ -176,31 +176,9 @@ fun MainScreen(onLogout: () -> Unit, notificationsViewModel: NotificationsViewMo
 
             // Екран Профілю
             composable(Screen.BottomTab.Profile.route) {
-                // Отримує  AuthViewModel
-                val authViewModel: com.example.coreops.ui.auth.AuthViewModel = androidx.hilt.navigation.compose.hiltViewModel()
-
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "Мій Профіль",
-                            fontSize = 24.sp,
-                            color = androidx.compose.ui.graphics.Color.Black,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(32.dp))
-
-                        Button(
-                            onClick = {
-                                authViewModel.logout()
-                                onLogout()
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color.Red)
-                        ) {
-                            Text("Вийти з акаунту", color = androidx.compose.ui.graphics.Color.White)
-                        }
-                    }
-                }
+                com.example.coreops.ui.profile.ProfileScreen(
+                    onLogout = onLogout
+                )
             }
 
             composable(

@@ -28,6 +28,7 @@ import com.example.coreops.data.remote.models.TaskDto
 @Composable
 fun TaskCard(
     task: TaskDto,
+    showProjectName: Boolean = false,
     onClick: () -> Unit
 ) {
     Card(
@@ -58,15 +59,24 @@ fun TaskCard(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Ідентифікатор (CORE-12)
+                // Ідентифікатор та опціонально Назва проєкту
+                val headerText = if (showProjectName && !task.projectName.isNullOrBlank()) {
+                    "${task.projectKey}-${task.id} • ${task.projectName}"
+                } else {
+                    "${task.projectKey}-${task.id}"
+                }
+
                 Text(
-                    text = "${task.projectKey}-${task.id}",
+                    text = headerText,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color.Gray
+                    color = Color(0xFF4B5563),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 // Лічильники
                 if (task.resourcesCount > 0) {

@@ -16,7 +16,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.coreops.data.remote.models.NotificationDto
-
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.Notifications
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.ui.text.style.TextAlign
 @Composable
 fun NotificationsScreen(
     viewModel: NotificationsViewModel = hiltViewModel()
@@ -41,11 +51,24 @@ fun NotificationsContent(
         containerColor = Color(0xFFF3F4F6),
         topBar = {
             TopAppBar(
-                title = { Text("Сповіщення", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text("Сповіщення", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                },
                 actions = {
-
                     TextButton(onClick = onMarkAllRead) {
-                        Text("Прочитати всі")
+                        Icon(
+                            imageVector = Icons.Default.DoneAll, // Подвійна галочка з макету
+                            contentDescription = "Прочитати всі",
+                            modifier = Modifier.size(20.dp),
+                            tint = Color(0xFF2563EB)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Прочитано",
+                            color = Color(0xFF2563EB),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF3F4F6))
@@ -95,6 +118,18 @@ fun NotificationsContent(
                                     } }
                                 )
                             }
+
+                            item {
+                                Text(
+                                    text = "Немає нових сповіщень",
+                                    color = Color(0xFF6B7280),
+                                    fontSize = 13.sp,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 16.dp, bottom = 32.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -108,41 +143,115 @@ fun NotificationItem(
     notification: NotificationDto,
     onClick: () -> Unit
 ) {
-
-    val backgroundColor = if (notification.isRead) Color.White else Color(0xFFE0F2FE)
-
-    val textColor = if (notification.isRead) Color.Gray else Color.Black
+    // Кольори для непрочитаного (світло-синій) та прочитаного (білий) стану
+    val backgroundColor = if (notification.isRead) Color.White else Color(0xFFF0F9FF)
+    val titleWeight = if (notification.isRead) FontWeight.Medium else FontWeight.Bold
+    val titleColor = if (notification.isRead) Color(0xFF374151) else Color.Black
 
     Card(
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            // Синій індикатор непрочитаного сповіщення
+            Box(
+                modifier = Modifier
+                    .padding(top = 16.dp)
+                    .size(8.dp)
+                    .background(
+                        color = if (notification.isRead) Color.Transparent else Color(0xFF3B82F6),
+                        shape = CircleShape
+                    )
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Іконка дзвіночка
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color(0xFFF3F4F6), CircleShape),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = notification.title,
-                    fontWeight = if (notification.isRead) FontWeight.Normal else FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = textColor
-                )
-                Text(
-                    text = notification.createdAt.take(10),
-                    color = Color.Gray,
-                    fontSize = 12.sp
+                Icon(
+                    imageVector = Icons.Outlined.Notifications,
+                    contentDescription = "Сповіщення",
+                    tint = Color(0xFF6B7280),
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = notification.message,
-                fontSize = 14.sp,
-                color = textColor
-            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Текстовий контент
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = notification.title,
+                    fontWeight = titleWeight,
+                    fontSize = 15.sp,
+                    color = titleColor
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = notification.message,
+                    fontSize = 13.sp,
+                    color = Color(0xFF6B7280),
+                    lineHeight = 18.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = formatNotificationTime(notification.createdAt),
+                    fontSize = 12.sp,
+                    color = Color(0xFF9CA3AF)
+                )
+            }
         }
+    }
+}
+// Утиліта для форматування дати у відносний час
+private fun formatNotificationTime(dateString: String?): String {
+    if (dateString.isNullOrBlank()) return "Невідомо"
+    return try {
+        val past = ZonedDateTime.parse(dateString)
+        val now = ZonedDateTime.now()
+
+        val minutes = ChronoUnit.MINUTES.between(past, now)
+        val hours = ChronoUnit.HOURS.between(past, now)
+        val days = ChronoUnit.DAYS.between(past, now)
+
+        when {
+            minutes < 1 -> "Щойно"
+            minutes < 60 -> "$minutes хв тому"
+            hours < 24 -> "$hours год тому"
+            days == 1L -> "Вчора"
+            else -> {
+                val day = past.dayOfMonth
+                val month = when (past.monthValue) {
+                    1 -> "січ."
+                    2 -> "лют."
+                    3 -> "бер."
+                    4 -> "квіт."
+                    5 -> "трав."
+                    6 -> "черв."
+                    7 -> "лип."
+                    8 -> "серп."
+                    9 -> "вер."
+                    10 -> "жовт."
+                    11 -> "лист."
+                    12 -> "груд."
+                    else -> ""
+                }
+                "$day $month"
+            }
+        }
+    } catch (e: Exception) {
+        dateString.take(10)
     }
 }

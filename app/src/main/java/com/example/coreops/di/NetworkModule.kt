@@ -80,4 +80,10 @@ object NetworkModule {
     fun provideNotificationsApi(retrofit: Retrofit): com.example.coreops.data.remote.api.NotificationsApi {
         return retrofit.create(com.example.coreops.data.remote.api.NotificationsApi::class.java)
     }
+
+    @Provides
+    @Singleton
+    fun provideUsersApi(retrofit: Retrofit): com.example.coreops.data.remote.api.UsersApi {
+        return retrofit.create(com.example.coreops.data.remote.api.UsersApi::class.java)
+    }
 }
