@@ -59,15 +59,39 @@ fun CreateTaskScreen(
     Scaffold(
         containerColor = Color.White,
         topBar = {
-            TopAppBar(
-                title = { Text("Нова задача", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
-            )
+            // Кастомна шапка без подвійних системних відступів
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Ліва кнопка "Назад"
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Назад",
+                        modifier = Modifier.size(28.dp),
+                        tint = Color.Black
+                    )
+                }
+
+                // Заголовок по центру
+                Text(
+                    text = "Нова задача",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    modifier = Modifier.weight(1f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                // Пустий простір справа для центрування
+                Spacer(modifier = Modifier.width(48.dp))
+            }
         }
     ) { paddingValues ->
         Column(
@@ -81,7 +105,7 @@ fun CreateTaskScreen(
             val projects by viewModel.projects.collectAsState()
             val selectedProjectId by viewModel.selectedProjectId.collectAsState()
 
-            // ЗДОБУВАЄМО УЧАСНИКІВ ОБРАНОГО ПРОЄКТУ
+            // ЗДОБУВАЄ УЧАСНИКІВ ОБРАНОГО ПРОЄКТУ
             val currentProjectMembers = projects.find { it.id == selectedProjectId }?.members ?: emptyList()
 
             // --- ВИБІР ПРОЄКТУ (Показується тільки якщо зайшли з Моїх Задач) ---
@@ -135,7 +159,7 @@ fun CreateTaskScreen(
             ExposedDropdownMenuBox(
                 expanded = expandedAssignee,
                 onExpandedChange = {
-                    // Відкриваємо список тільки якщо обрано проєкт
+                    // Відкриває список тільки якщо обрано проєкт
                     if (selectedProjectId != null) expandedAssignee = !expandedAssignee
                 }
             ) {
@@ -146,7 +170,7 @@ fun CreateTaskScreen(
                     label = { Text("Виконавець") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedAssignee) },
                     modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    enabled = selectedProjectId != null, // Блокуємо, якщо проєкт не обрано
+                    enabled = selectedProjectId != null, // Блокує, якщо проєкт не обрано
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
                         unfocusedContainerColor = Color.White,

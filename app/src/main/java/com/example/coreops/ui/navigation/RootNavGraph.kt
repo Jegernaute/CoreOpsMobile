@@ -27,7 +27,7 @@ fun RootNavGraph(navController: NavHostController) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
-                onNavigateToRegister = { // <--- ДОДАЙ ОБРОБКУ КЛІКУ
+                onNavigateToRegister = {
                     navController.navigate(Screen.Register.route)
                 }
             )

@@ -32,7 +32,7 @@ class AuthPreferences @Inject constructor(context: Context) {
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
 
-        // Зчитує дані з диска ЛИШЕ ОДИН РАЗ при старті додатка
+        // Зчитує дані з диска лише один раз при старті додатка
         cachedAccessToken = prefs.getString("access_token", null)
         cachedRefreshToken = prefs.getString("refresh_token", null)
     }

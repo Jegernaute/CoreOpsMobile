@@ -27,7 +27,15 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.coreops.data.remote.models.TaskDto
 import com.example.coreops.ui.tasks.components.TaskCard
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectTasksScreen(
     projectId: Int,
@@ -37,7 +45,11 @@ fun ProjectTasksScreen(
     onCreateTaskClick: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
+    val currentFilters by viewModel.filters.collectAsState()
+    val projectMembers by viewModel.projectMembers.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    var showFilterSheet by remember { mutableStateOf(false) }
 
     // СИНХРОНІЗАЦІЯ ДАНИХ (Вирішує проблему з лічильником коментарів)
     DisposableEffect(lifecycleOwner) {
@@ -62,8 +74,264 @@ fun ProjectTasksScreen(
         onTabSelected = { selectedTabIndex = it },
         onNavigateBack = onNavigateBack,
         onTaskClick = onTaskClick,
-        onCreateTaskClick = onCreateTaskClick
+        onCreateTaskClick = onCreateTaskClick,
+        onFilterClick = { showFilterSheet = true }
     )
+
+    if (showFilterSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+        var tempPriority by remember { mutableStateOf(currentFilters.priority) }
+        var tempTaskType by remember { mutableStateOf(currentFilters.taskType) }
+        var tempDeadline by remember { mutableStateOf(currentFilters.deadlineFilter) }
+        var tempAssignee by remember { mutableStateOf(currentFilters.assignee) }
+        var tempReporter by remember { mutableStateOf(currentFilters.reporter) }
+
+        var expandedAssigneeMenu by remember { mutableStateOf(false) }
+        var expandedReporterMenu by remember { mutableStateOf(false) }
+
+        ModalBottomSheet(
+            onDismissRequest = { showFilterSheet = false },
+            sheetState = sheetState,
+            containerColor = Color.White,
+            dragHandle = { BottomSheetDefaults.DragHandle() }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                Text(
+                    text = "Фільтри проєкту",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+
+                // Виконавець та Автор (Row)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Виконавець
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Виконавець", fontWeight = FontWeight.Medium, fontSize = 16.sp, color = Color.Gray)
+                        val selectedAssignee = projectMembers.find { it.userId == tempAssignee }?.userName ?: "Будь-хто"
+
+                        ExposedDropdownMenuBox(
+                            expanded = expandedAssigneeMenu,
+                            onExpandedChange = { expandedAssigneeMenu = !expandedAssigneeMenu }
+                        ) {
+                            OutlinedTextField(
+                                value = selectedAssignee,
+                                onValueChange = {},
+                                readOnly = true,
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedAssigneeMenu) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White
+                                )
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expandedAssigneeMenu,
+                                onDismissRequest = { expandedAssigneeMenu = false },
+                                modifier = Modifier.background(Color.White)
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Будь-хто", color = Color.Black, fontWeight = FontWeight.Medium) },
+                                    onClick = {
+                                        tempAssignee = null
+                                        expandedAssigneeMenu = false
+                                    }
+                                )
+                                HorizontalDivider()
+                                projectMembers.forEach { member ->
+                                    DropdownMenuItem(
+                                        text = { Text(member.userName, color = Color.Black) },
+                                        onClick = {
+                                            tempAssignee = member.userId
+                                            expandedAssigneeMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Автор
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Автор", fontWeight = FontWeight.Medium, fontSize = 16.sp, color = Color.Gray)
+                        val selectedReporter = projectMembers.find { it.userId == tempReporter }?.userName ?: "Будь-хто"
+
+                        ExposedDropdownMenuBox(
+                            expanded = expandedReporterMenu,
+                            onExpandedChange = { expandedReporterMenu = !expandedReporterMenu }
+                        ) {
+                            OutlinedTextField(
+                                value = selectedReporter,
+                                onValueChange = {},
+                                readOnly = true,
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedReporterMenu) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White
+                                )
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expandedReporterMenu,
+                                onDismissRequest = { expandedReporterMenu = false },
+                                modifier = Modifier.background(Color.White)
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Будь-хто", color = Color.Black, fontWeight = FontWeight.Medium) },
+                                    onClick = {
+                                        tempReporter = null
+                                        expandedReporterMenu = false
+                                    }
+                                )
+                                HorizontalDivider()
+                                projectMembers.forEach { member ->
+                                    DropdownMenuItem(
+                                        text = { Text(member.userName, color = Color.Black) },
+                                        onClick = {
+                                            tempReporter = member.userId
+                                            expandedReporterMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Пріоритет
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Пріоритет", fontWeight = FontWeight.Medium, fontSize = 16.sp, color = Color.Gray)
+                    val priorities = listOf("low" to "Низький", "medium" to "Середній", "high" to "Високий", "critical" to "Критичний")
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        priorities.forEach { (backendValue, displayLabel) ->
+                            val isSelected = tempPriority == backendValue
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { tempPriority = if (isSelected) null else backendValue },
+                                label = { Text(displayLabel) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Color(0xFFEFF6FF),
+                                    selectedLabelColor = Color(0xFF2563EB)
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true, selected = isSelected,
+                                    borderColor = Color(0xFFE5E7EB), selectedBorderColor = Color(0xFF2563EB)
+                                )
+                            )
+                        }
+                    }
+                }
+
+                // Тип задачі
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Тип задачі", fontWeight = FontWeight.Medium, fontSize = 16.sp, color = Color.Gray)
+                    val taskTypes = listOf("task" to "Задача", "bug" to "Баг", "feature" to "Фіча")
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        taskTypes.forEach { (backendValue, displayLabel) ->
+                            val isSelected = tempTaskType == backendValue
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { tempTaskType = if (isSelected) null else backendValue },
+                                label = { Text(displayLabel) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Color(0xFFEFF6FF),
+                                    selectedLabelColor = Color(0xFF2563EB)
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true, selected = isSelected,
+                                    borderColor = Color(0xFFE5E7EB), selectedBorderColor = Color(0xFF2563EB)
+                                )
+                            )
+                        }
+                    }
+                }
+
+                // Термін виконання
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Термін виконання", fontWeight = FontWeight.Medium, fontSize = 16.sp, color = Color.Gray)
+                    val deadlines = listOf("today" to "На сьогодні", "week" to "На цьому тижні", "overdue" to "Протерміновані")
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        deadlines.forEach { (typeValue, displayLabel) ->
+                            val isSelected = tempDeadline == typeValue
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { tempDeadline = if (isSelected) null else typeValue },
+                                label = { Text(displayLabel) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Color(0xFFEFF6FF),
+                                    selectedLabelColor = Color(0xFF2563EB)
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true, selected = isSelected,
+                                    borderColor = Color(0xFFE5E7EB), selectedBorderColor = Color(0xFF2563EB)
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Кнопки дій
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.clearFilters()
+                            showFilterSheet = false
+                        },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red)
+                    ) {
+                        Text("Скинути")
+                    }
+
+                    Button(
+                        onClick = {
+                            val updatedFilters = currentFilters.copy(
+                                priority = tempPriority,
+                                taskType = tempTaskType,
+                                deadlineFilter = tempDeadline,
+                                assignee = tempAssignee,
+                                reporter = tempReporter
+                            )
+                            viewModel.applyFilters(updatedFilters)
+                            showFilterSheet = false
+                        },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+                    ) {
+                        Text("Застосувати", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,64 +343,75 @@ fun ProjectTasksContent(
     onTabSelected: (Int) -> Unit,
     onNavigateBack: () -> Unit,
     onTaskClick: (Int) -> Unit,
-    onCreateTaskClick: () -> Unit
+    onCreateTaskClick: () -> Unit,
+    onFilterClick: () -> Unit
 ) {
     Scaffold(
         containerColor = Color(0xFFF3F4F6),
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = (state as? ProjectTasksState.Success)?.projectName ?: "Завантаження...",
-                            color = Color.Black,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        (state as? ProjectTasksState.Success)?.activeSprintName?.let { sprintName ->
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        color = Color(0xFFE5E7EB),
-                                        shape = RoundedCornerShape(50)
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = sprintName,
-                                    color = Color(0xFF4B5563),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Ліва кнопка "Назад"
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.size(48.dp) // Стандартна зона натискання
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Назад",
+                        modifier = Modifier.size(28.dp),
+                        tint = Color.Black
+                    )
+                }
+
+                // Центральний контент (Назва проєкту + Спринт)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = (state as? ProjectTasksState.Success)?.projectName ?: "Завантаження...",
+                        color = Color.Black,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    (state as? ProjectTasksState.Success)?.activeSprintName?.let { sprintName ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = Color(0xFFE5E7EB),
+                                    shape = RoundedCornerShape(50)
                                 )
-                            }
+                                .padding(horizontal = 12.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = sprintName,
+                                color = Color(0xFF4B5563),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Назад",
-                            modifier = Modifier.size(28.dp),
-                            tint = Color.Black
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* TODO: Логіка фільтрів */ }) {
-                        Icon(
-                            imageVector = Icons.Outlined.FilterAlt,
-                            contentDescription = "Фільтри",
-                            modifier = Modifier.size(28.dp),
-                            tint = Color.Black
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color(0xFFF3F4F6)
-                )
-            )
+                }
+
+                // Права кнопка "Фільтри"
+                IconButton(
+                    onClick = onFilterClick,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.FilterAlt,
+                        contentDescription = "Фільтри",
+                        modifier = Modifier.size(28.dp),
+                        tint = Color.Black
+                    )
+                }
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -284,7 +563,8 @@ fun ProjectTasksScreenPreview() {
             onTabSelected = {},
             onNavigateBack = {},
             onTaskClick = {},
-            onCreateTaskClick = {}
+            onCreateTaskClick = {},
+            onFilterClick = {}
         )
     }
 }

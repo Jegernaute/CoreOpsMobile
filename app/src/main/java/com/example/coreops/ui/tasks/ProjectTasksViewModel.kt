@@ -14,6 +14,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import com.example.coreops.data.remote.models.ProjectMemberDto
+
+data class ProjectTaskFilters(
+    val priority: String? = null,
+    val taskType: String? = null,
+    val assignee: Int? = null,
+    val reporter: Int? = null,
+    val deadlineFilter: String? = null,
+    val dueDate: String? = null,
+    val dueDateAfter: String? = null,
+    val dueDateBefore: String? = null
+)
 
 sealed class ProjectTasksState {
     object Loading : ProjectTasksState()
@@ -38,6 +52,12 @@ class ProjectTasksViewModel @Inject constructor(
 
     private val _state = MutableStateFlow<ProjectTasksState>(ProjectTasksState.Loading)
     val state: StateFlow<ProjectTasksState> = _state.asStateFlow()
+
+    private val _filters = MutableStateFlow(ProjectTaskFilters())
+    val filters: StateFlow<ProjectTaskFilters> = _filters.asStateFlow()
+
+    private val _projectMembers = MutableStateFlow<List<ProjectMemberDto>>(emptyList())
+    val projectMembers: StateFlow<List<ProjectMemberDto>> = _projectMembers.asStateFlow()
 
     private var nextCursor: String? = null
     private var isLoadingMore = false
@@ -82,7 +102,19 @@ class ProjectTasksViewModel @Inject constructor(
             }
             nextCursor = null
 
-            taskRepository.getTasks(projectId, cursor = null).onSuccess { paginatedResponse ->
+            val currentFilters = _filters.value
+
+            taskRepository.getTasks(
+                projectId = projectId,
+                priority = currentFilters.priority,
+                taskType = currentFilters.taskType,
+                reporter = currentFilters.reporter,
+                assignee = currentFilters.assignee,
+                dueDateAfter = currentFilters.dueDateAfter,
+                dueDateBefore = currentFilters.dueDateBefore,
+                dueDate = currentFilters.dueDate,
+                cursor = null
+            ).onSuccess { paginatedResponse ->
                 nextCursor = extractCursor(paginatedResponse.next)
                 _state.value = ProjectTasksState.Success(
                     tasks = paginatedResponse.results,
@@ -106,7 +138,19 @@ class ProjectTasksViewModel @Inject constructor(
 
         isLoadingMore = true
         viewModelScope.launch {
-            taskRepository.getTasks(currentProjectId, cursor = nextCursor).onSuccess { paginatedResponse ->
+            val currentFilters = _filters.value
+
+            taskRepository.getTasks(
+                projectId = currentProjectId,
+                priority = currentFilters.priority,
+                taskType = currentFilters.taskType,
+                reporter = currentFilters.reporter,
+                assignee = currentFilters.assignee,
+                dueDateAfter = currentFilters.dueDateAfter,
+                dueDateBefore = currentFilters.dueDateBefore,
+                dueDate = currentFilters.dueDate,
+                cursor = nextCursor
+            ).onSuccess { paginatedResponse ->
                 val accumulatedTasks = currentState.tasks + paginatedResponse.results
                 nextCursor = extractCursor(paginatedResponse.next)
 
@@ -161,9 +205,12 @@ class ProjectTasksViewModel @Inject constructor(
             val projectRes = projectRepository.getProjectById(projectId)
             val sprintRes = taskRepository.getActiveSprint(projectId)
 
-            // ДОДАНО: Збереження в кеш
             cachedProjectName = projectRes.getOrNull()?.name ?: "Проєкт"
             cachedSprintName = sprintRes.getOrNull()?.firstOrNull()?.name
+
+            projectRes.getOrNull()?.members?.let { members ->
+                _projectMembers.value = members.sortedBy { it.userName }
+            }
 
             val currentState = _state.value
             if (currentState is ProjectTasksState.Success) {
@@ -172,6 +219,52 @@ class ProjectTasksViewModel @Inject constructor(
                     activeSprintName = cachedSprintName
                 )
             }
+        }
+    }
+
+    fun applyFilters(newFilters: ProjectTaskFilters) {
+        val processedFilters = processDateFilters(newFilters)
+        _filters.value = processedFilters
+        loadTasks(currentProjectId)
+    }
+
+    fun clearFilters() {
+        _filters.value = ProjectTaskFilters()
+        loadTasks(currentProjectId)
+    }
+
+    private fun processDateFilters(filters: ProjectTaskFilters): ProjectTaskFilters {
+        if (filters.deadlineFilter == null) {
+            return filters.copy(dueDate = null, dueDateBefore = null, dueDateAfter = null)
+        }
+
+        val today = LocalDate.now()
+        val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+
+        return when (filters.deadlineFilter) {
+            "today" -> filters.copy(
+                dueDate = today.toString(),
+                dueDateBefore = null,
+                dueDateAfter = null
+            )
+            "week" -> {
+                val start = today.atStartOfDay().format(dateTimeFormatter)
+                val end = today.plusDays(7).atTime(23, 59, 59).format(dateTimeFormatter)
+                filters.copy(
+                    dueDate = null,
+                    dueDateAfter = start,
+                    dueDateBefore = end
+                )
+            }
+            "overdue" -> {
+                val end = today.minusDays(1).atTime(23, 59, 59).format(dateTimeFormatter)
+                filters.copy(
+                    dueDate = null,
+                    dueDateAfter = null,
+                    dueDateBefore = end
+                )
+            }
+            else -> filters
         }
     }
 

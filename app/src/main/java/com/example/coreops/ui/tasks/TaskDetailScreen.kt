@@ -57,15 +57,38 @@ fun TaskDetailContent(
     Scaffold(
         containerColor = Color(0xFFF3F4F6),
         topBar = {
-            TopAppBar(
-                title = { Text("Деталі задачі", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF3F4F6))
-            )
+            // Кастомна шапка без подвійних системних відступів
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Ліва кнопка "Назад"
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.size(48.dp) // Стандартна зона натискання
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Назад",
+                        modifier = Modifier.size(28.dp),
+                        tint = Color.Black
+                    )
+                }
+
+                // Заголовок по центру
+                Text(
+                    text = "Деталі задачі",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    modifier = Modifier.weight(1f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.width(48.dp))
+            }
         },
 
         bottomBar = {
@@ -135,7 +158,7 @@ fun TaskDetailBody(
         )
 
         // =======================================================
-        // 👇 НОВИЙ БЛОК ПЛАНУВАННЯ (З'являється тільки якщо є дані) 👇
+        //  НОВИЙ БЛОК ПЛАНУВАННЯ (З'являється тільки якщо є дані)
         // =======================================================
         if (task.dueDate != null || task.sprint != null || task.estimatedHours != null) {
             Card(
@@ -185,7 +208,7 @@ fun TaskDetailBody(
             }
         }
         // =======================================================
-        // 👆 КІНЕЦЬ БЛОКУ ПЛАНУВАННЯ 👆
+        //  КІНЕЦЬ БЛОКУ ПЛАНУВАННЯ
         // =======================================================
 
         // --- БЛОК 2: ОСНОВНІ ДЕТАЛІ ТА ОПИС ---

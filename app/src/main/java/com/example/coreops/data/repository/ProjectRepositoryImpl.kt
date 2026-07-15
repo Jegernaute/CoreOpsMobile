@@ -12,11 +12,27 @@ class ProjectRepositoryImpl @Inject constructor(
     private val api: ProjectsApi
 ) : ProjectRepository {
 
-    override suspend fun getProjects(cursor: String?): Result<PaginatedResponse<ProjectDto>> {
+    override suspend fun getProjects(
+        cursor: String?,
+        search: String?,
+        ordering: String?,
+        showArchived: Boolean?,
+        status: String?,
+        hasActiveTasks: Boolean?,
+        isCompleted: Boolean?
+    ): Result<PaginatedResponse<ProjectDto>> {
         return try {
-            // Робить запит до API
-            val response = api.getProjects(cursor)
-            // Якщо все ок, повертає об'єкт
+            // Робить запит до API та передає параметри пошуку і пагінації
+            val response = api.getProjects(
+                cursor = cursor,
+                search = search,
+                ordering = ordering,
+                showArchived = showArchived,
+                status = status,
+                hasActiveTasks = hasActiveTasks,
+                isCompleted = isCompleted
+            )
+            // Якщо все ок повертає об'єкт
             Result.success(response)
         } catch (e: Exception) {
             // Якщо сталася помилка (немає інтернету, 404, 500 тощо), повертає Result.failure

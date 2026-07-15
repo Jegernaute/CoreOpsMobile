@@ -19,10 +19,27 @@ class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun getTasks(
         projectId: Int,
+        priority: String?,
+        taskType: String?,
+        reporter: Int?,
+        assignee: Int?,
+        dueDateAfter: String?,
+        dueDateBefore: String?,
+        dueDate: String?,
         cursor: String?
     ): Result<PaginatedResponse<TaskDto>> {
         return try {
-            val response = api.getTasks(projectId, cursor)
+            val response = api.getTasks(
+                projectId = projectId,
+                priority = priority,
+                taskType = taskType,
+                reporter = reporter,
+                assignee = assignee,
+                dueDateAfter = dueDateAfter,
+                dueDateBefore = dueDateBefore,
+                dueDate = dueDate,
+                cursor = cursor
+            )
             Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)
@@ -85,12 +102,19 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getAllMyTasks(cursor: String?): Result<PaginatedResponse<TaskDto>> {
+    override suspend fun getAllMyTasks(
+        project: Int?, priority: String?, taskType: String?, reporter: Int?,
+        assignee: Int?, status: String?, ordering: String?, search: String?,
+        dueDateAfter: String?, dueDateBefore: String?, dueDate: String?, cursor: String?
+    ): Result<PaginatedResponse<TaskDto>> {
         return try {
-            val response = api.getAllMyTasks(cursor)
-
+            val response = api.getAllMyTasks(
+                project = project, priority = priority, taskType = taskType,
+                reporter = reporter, assignee = assignee, status = status,
+                ordering = ordering, search = search, dueDateAfter = dueDateAfter,
+                dueDateBefore = dueDateBefore, dueDate = dueDate, cursor = cursor
+            )
             Result.success(response)
-
         } catch (e: retrofit2.HttpException) {
             Result.failure(Exception("Помилка сервера: ${e.code()}"))
         } catch (e: java.io.IOException) {

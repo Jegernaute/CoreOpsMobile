@@ -23,12 +23,32 @@ interface TasksApi {
     @GET("api/v1/tasks/")
     suspend fun getTasks(
         @Query("project") projectId: Int,
-        @Query("cursor") cursor: String? = null // Retrofit перетворить це на ?project=ID
+        @Query("priority") priority: String? = null,
+        @Query("task_type") taskType: String? = null,
+        @Query("reporter") reporter: Int? = null,
+        @Query("assignee") assignee: Int? = null,
+        @Query("due_date_after") dueDateAfter: String? = null,
+        @Query("due_date_before") dueDateBefore: String? = null,
+        @Query("due_date") dueDate: String? = null,
+        @Query("cursor") cursor: String? = null
     ): PaginatedResponse<TaskDto>
 
-    // всі доступні задачі відображає
+    // Всі доступні задачі з підтримкою фільтрів та сортування
     @GET("api/v1/tasks/")
-    suspend fun getAllMyTasks(@Query("cursor") cursor: String? = null): PaginatedResponse<TaskDto>
+    suspend fun getAllMyTasks(
+        @Query("project") project: Int? = null,
+        @Query("priority") priority: String? = null,
+        @Query("task_type") taskType: String? = null,
+        @Query("reporter") reporter: Int? = null,
+        @Query("assignee") assignee: Int? = null,
+        @Query("status") status: String? = null,
+        @Query("ordering") ordering: String? = null,
+        @Query("search") search: String? = null,
+        @Query("due_date_after") dueDateAfter: String? = null,
+        @Query("due_date_before") dueDateBefore: String? = null,
+        @Query("due_date") dueDate: String? = null,
+        @Query("cursor") cursor: String? = null
+    ): PaginatedResponse<TaskDto>
 
     /**
      * Отримання повної інформації про одну задачу за її ID (включаючи коментарі та ресурси).

@@ -50,29 +50,39 @@ fun NotificationsContent(
     Scaffold(
         containerColor = Color(0xFFF3F4F6),
         topBar = {
-            TopAppBar(
-                title = {
-                    Text("Сповіщення", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                },
-                actions = {
-                    TextButton(onClick = onMarkAllRead) {
-                        Icon(
-                            imageVector = Icons.Default.DoneAll, // Подвійна галочка з макету
-                            contentDescription = "Прочитати всі",
-                            modifier = Modifier.size(20.dp),
-                            tint = Color(0xFF2563EB)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Прочитано",
-                            color = Color(0xFF2563EB),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF3F4F6))
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Сповіщення",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    modifier = Modifier.weight(1f)
+                )
+
+                TextButton(
+                    onClick = onMarkAllRead,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DoneAll,
+                        contentDescription = "Прочитати всі",
+                        modifier = Modifier.size(20.dp),
+                        tint = Color(0xFF2563EB)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Прочитано",
+                        color = Color(0xFF2563EB),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
     ) { paddingValues ->
         Box(

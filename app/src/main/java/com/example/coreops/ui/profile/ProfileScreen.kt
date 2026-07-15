@@ -13,6 +13,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -20,7 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.coreops.ui.auth.AuthViewModel
-
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -32,15 +35,36 @@ fun ProfileScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Профіль", fontSize = 20.sp, fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(onClick = { /* TODO: Редагування профілю */ }) {
-                        Icon(Icons.Outlined.Edit, contentDescription = "Редагувати", tint = Color.Black)
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color(0xFFF3F4F6))
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Пустий простір зліва для центрування заголовка
+                Spacer(modifier = Modifier.width(48.dp))
+
+                Text(
+                    text = "Профіль",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    modifier = Modifier.weight(1f),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                IconButton(
+                    onClick = { /* TODO: Редагування профілю */ },
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = "Редагувати",
+                        modifier = Modifier.size(24.dp),
+                        tint = Color.Black
+                    )
+                }
+            }
         },
         containerColor = Color(0xFFF3F4F6)
     ) { paddingValues ->
@@ -82,21 +106,34 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(24.dp))
 
                         // --- 1. Аватар та Основна інформація ---
-                        Box(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .background(Color.LightGray, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // TODO: Замінити на AsyncImage при підключенні Coil/API
-                            Icon(Icons.Outlined.Person, contentDescription = "Аватар", tint = Color.Gray, modifier = Modifier.size(40.dp))
+                        if (!user.safeAvatarUrl.isNullOrEmpty()) {
+                            // Відображення завантаженого зображення
+                            AsyncImage(
+                                model = user.safeAvatarUrl,
+                                contentDescription = "Аватар",
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.LightGray),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            // Відображення заглушки
+                            Box(
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .background(Color.LightGray, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Outlined.Person, contentDescription = "Аватар заглушка", tint = Color.Gray, modifier = Modifier.size(48.dp))
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
                             text = user.fullName,
-                            fontSize = 20.sp,
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
                         )
@@ -126,6 +163,7 @@ fun ProfileScreen(
 
                         // --- 2. Контактні дані ---
                         Card(
+                            modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = Color.White),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -143,6 +181,7 @@ fun ProfileScreen(
 
                         // --- 3. Налаштування ---
                         Card(
+                            modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = Color.White),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -164,7 +203,7 @@ fun ProfileScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                        .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(Icons.Outlined.DarkMode, contentDescription = null, tint = Color(0xFF6B7280))
@@ -173,7 +212,8 @@ fun ProfileScreen(
                                     Spacer(modifier = Modifier.weight(1f))
                                     Switch(
                                         checked = false,
-                                        onCheckedChange = { /* TODO: Логіка зміни теми */ }
+                                        onCheckedChange = { /* TODO: Логіка зміни теми */ },
+                                        modifier = Modifier.scale(0.85f)
                                     )
                                 }
                             }

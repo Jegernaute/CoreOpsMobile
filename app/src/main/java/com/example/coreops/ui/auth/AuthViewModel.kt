@@ -46,8 +46,6 @@ class AuthViewModel @Inject constructor(
     val rememberMe: StateFlow<Boolean> = _rememberMe.asStateFlow()
 
     init {
-        // Оскільки AuthPreferences тепер працює синхронно
-        //  більше не потрібні корутини (launch) та firstOrNull()
         val savedEmail = authPreferences.getSavedEmail()
         val savedPassword = authPreferences.getSavedPassword()
 

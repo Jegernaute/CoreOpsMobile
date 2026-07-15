@@ -92,7 +92,7 @@ fun RegisterContent(
             .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(48.dp)) // Верхній відступ
+        Spacer(modifier = Modifier.height(48.dp))
 
         // 1. Логотип
         Surface(
@@ -298,7 +298,7 @@ fun RegisterContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(48.dp)) // Нижній відступ
+        Spacer(modifier = Modifier.height(48.dp))
     }
 }
 

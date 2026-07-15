@@ -9,6 +9,14 @@ import com.example.coreops.data.remote.models.ProjectDto
  */
 interface ProjectRepository {
     // Передає cursor і повертає повну пагіновану відповідь
-    suspend fun getProjects(cursor: String? = null): Result<PaginatedResponse<ProjectDto>>
+    suspend fun getProjects(
+        cursor: String? = null,
+        search: String? = null,
+        ordering: String? = null,
+        showArchived: Boolean? = null,
+        status: String? = null,
+        hasActiveTasks: Boolean? = null,
+        isCompleted: Boolean? = null
+    ): Result<PaginatedResponse<ProjectDto>>
     suspend fun getProjectById(id: Int): Result<ProjectDto>
 }

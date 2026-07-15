@@ -7,11 +7,14 @@ import com.example.coreops.data.remote.models.ProjectDto
 import com.example.coreops.domain.TaskSyncManager
 import com.example.coreops.domain.repository.ProjectRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.coreops.domain.repository.ProfileRepository
 
 sealed interface ProjectsState {
     object Loading : ProjectsState
@@ -22,45 +25,122 @@ sealed interface ProjectsState {
 @HiltViewModel
 class ProjectsViewModel @Inject constructor(
     private val repository: ProjectRepository,
-    private val syncManager: TaskSyncManager // 1. Інжектимо твій менеджер синхронізації
+    private val profileRepository: ProfileRepository,
+    private val syncManager: TaskSyncManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<ProjectsState>(ProjectsState.Loading)
     val state: StateFlow<ProjectsState> = _state.asStateFlow()
 
+    // Стан для аватара користувача
+    private val _avatarUrl = MutableStateFlow<String?>(null)
+    val avatarUrl: StateFlow<String?> = _avatarUrl.asStateFlow()
+
+    // Стан для тексту пошуку
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    // Стан для сортування (за замовчуванням null)
+    private val _ordering = MutableStateFlow<String?>(null)
+    val ordering: StateFlow<String?> = _ordering.asStateFlow()
+
+    // Стан для відображення архівованих проєктів
+    private val _showArchived = MutableStateFlow(false)
+    val showArchived: StateFlow<Boolean> = _showArchived.asStateFlow()
+
+    // Додавання станів фільтрації
+    private val _status = MutableStateFlow<String?>(null)
+    val status: StateFlow<String?> = _status.asStateFlow()
+
+    private val _hasActiveTasks = MutableStateFlow<Boolean?>(null)
+    val hasActiveTasks: StateFlow<Boolean?> = _hasActiveTasks.asStateFlow()
+
+    private val _isCompleted = MutableStateFlow<Boolean?>(null)
+    val isCompleted: StateFlow<Boolean?> = _isCompleted.asStateFlow()
+
+    // Оновлення параметрів фільтрації (BottomSheet)
+    fun updateFilters(newOrdering: String?, includeArchived: Boolean, activeTasksOnly: Boolean?, completedOnly: Boolean?) {
+        _ordering.value = newOrdering
+        _showArchived.value = includeArchived
+        _hasActiveTasks.value = activeTasksOnly
+        _isCompleted.value = completedOnly
+        loadProjects()
+    }
+
+    // Оновлення статусу (Чіпи)
+    fun updateStatus(newStatus: String?) {
+        _status.value = newStatus
+        loadProjects()
+    }
     private var nextCursor: String? = null
     private var isLoadingMore = false
+    private var searchJob: Job? = null
 
     init {
         // Початкове завантаження (із лоадером)
         loadProjects()
+        loadUserProfile()
 
-        // 2. Починаємо слухати глобальні оновлення задач
+        // 2. Починає слухати глобальні оновлення задач
         viewModelScope.launch {
             syncManager.serverFetchRequests.collect {
                 // Щойно якась задача на іншому екрані змінилася і смикнула сервер,
-                // ми робимо "тихе" оновлення списку проєктів
+                //  робиться "тихе" оновлення списку проєктів
                 loadProjects(isSilent = true)
             }
+        }
+    }
+
+    private fun loadUserProfile() {
+        viewModelScope.launch {
+            profileRepository.getMyProfile().onSuccess { userDto ->
+                _avatarUrl.value = userDto.safeAvatarUrl
+            }
+        }
+    }
+
+    // Обробка зміни тексту в полі пошуку
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+        searchJob?.cancel() // Скасовує попередній таймер
+        searchJob = viewModelScope.launch {
+            delay(300) // Чекає 300мс після останнього натискання клавіші
+            loadProjects()
         }
     }
 
     // 3. Додано прапорець isSilent (за замовчуванням false)
     fun loadProjects(isSilent: Boolean = false) {
         viewModelScope.launch {
-            // Показуємо екран завантаження ТІЛЬКИ якщо це не тихе оновлення
+            // Показує екран завантаження ТІЛЬКИ якщо це не тихе оновлення
             if (!isSilent) {
                 _state.value = ProjectsState.Loading
             }
             nextCursor = null
 
-            val result = repository.getProjects(cursor = null)
+            val currentQuery = _searchQuery.value.takeIf { it.isNotBlank() }
+            val currentOrdering = _ordering.value
+            val currentShowArchived = _showArchived.value.takeIf { it } // передача true або null
+
+            val currentStatus = _status.value
+            val currentHasActiveTasks = _hasActiveTasks.value
+            val currentIsCompleted = _isCompleted.value
+
+            val result = repository.getProjects(
+                cursor = null,
+                search = currentQuery,
+                ordering = currentOrdering,
+                showArchived = currentShowArchived,
+                status = currentStatus,
+                hasActiveTasks = currentHasActiveTasks,
+                isCompleted = currentIsCompleted
+            )
 
             result.fold(
                 onSuccess = { paginatedResponse ->
                     nextCursor = extractCursor(paginatedResponse.next)
 
-                    // Оновлюємо дані. Якщо це було тихе оновлення, UI просто
+                    // Оновлює дані. Якщо це було тихе оновлення, UI просто
                     // миттєво "перемалює" нові відсотки та цифри без стрибків
                     _state.value = ProjectsState.Success(
                         projects = paginatedResponse.results,
@@ -74,7 +154,7 @@ class ProjectsViewModel @Inject constructor(
                         )
                     }
                     // Якщо помилка сталася під час "тихого" оновлення у фоні,
-                    // ми її просто ігноруємо, щоб не ламати поточний вигляд екрану користувачу
+                    // її просто ігнорує, щоб не ламати поточний вигляд екрану користувачу
                 }
             )
         }
@@ -88,7 +168,22 @@ class ProjectsViewModel @Inject constructor(
 
         isLoadingMore = true
         viewModelScope.launch {
-            repository.getProjects(cursor = nextCursor).fold(
+            val currentQuery = _searchQuery.value.takeIf { it.isNotBlank() }
+            val currentOrdering = _ordering.value
+            val currentShowArchived = _showArchived.value.takeIf { it }
+            val currentStatus = _status.value
+            val currentHasActiveTasks = _hasActiveTasks.value
+            val currentIsCompleted = _isCompleted.value
+
+            repository.getProjects(
+                cursor = nextCursor,
+                search = currentQuery,
+                ordering = currentOrdering,
+                showArchived = currentShowArchived,
+                status = currentStatus,
+                hasActiveTasks = currentHasActiveTasks,
+                isCompleted = currentIsCompleted
+            ).fold(
                 onSuccess = { paginatedResponse ->
                     val accumulatedProjects = currentState.projects + paginatedResponse.results
                     nextCursor = extractCursor(paginatedResponse.next)

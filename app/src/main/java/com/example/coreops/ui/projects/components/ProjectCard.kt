@@ -103,7 +103,7 @@ fun ProjectCard(
                 progress = { project.progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp),
+                    .height(8.dp),
                 color = Color(0xFF2563EB),
                 trackColor = Color(0xFFE5E7EB),
                 strokeCap = StrokeCap.Round
