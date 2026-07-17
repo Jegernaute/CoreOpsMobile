@@ -183,7 +183,7 @@ fun MyTasksScreen(
 
 
                         val filteredTasks = when (selectedTabIndex) {
-                            1 -> allTasks.filter { it.status == "todo" }
+                            1 -> allTasks.filter { it.status == "to_do" }
                             2 -> allTasks.filter { it.status == "in_progress" }
                             3 -> allTasks.filter { it.status == "review" }
                             4 -> allTasks.filter { it.status == "done" }
@@ -192,7 +192,7 @@ fun MyTasksScreen(
 
                         if (filteredTasks.isEmpty()) {
                             Text(
-                                text = "У цій категорії задач немає 🎉",
+                                text = "У цій категорії задач немає ",
                                 modifier = Modifier.align(Alignment.Center),
                                 color = Color.Gray,
                                 fontSize = 16.sp

@@ -1,6 +1,7 @@
 package com.example.coreops.ui.tasks.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -12,10 +13,12 @@ import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.List
+import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -141,19 +144,56 @@ fun TaskCard(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Аватар виконавця (або автора, якщо виконавця немає)
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(Color(0xFFE5E7EB), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = (task.assigneeName ?: task.reporterName ?: "?").take(1).uppercase(),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF374151)
+
+                // Бере дані виконавця
+                val rawAvatarUrl = task.assigneeDetails?.avatar ?: task.assigneeAvatar
+                val assigneeName = task.assigneeDetails?.name ?: task.assigneeName
+
+                if (!rawAvatarUrl.isNullOrBlank()) {
+                    // 1. Є лінк на аватар виконавця
+                    val fixedAvatarUrl = rawAvatarUrl
+                        .replace("127.0.0.1", "10.0.2.2")
+                        .replace("localhost", "10.0.2.2")
+
+                    coil.compose.AsyncImage(
+                        model = fixedAvatarUrl,
+                        contentDescription = "Аватар виконавця",
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
                     )
+                } else if (!assigneeName.isNullOrBlank()) {
+                    // 2. Виконавець є, але без фото (показує літеру)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color(0xFFE5E7EB), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = assigneeName.take(1).uppercase(),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF374151)
+                        )
+                    }
+                } else {
+                    // 3. Задачу нікому не призначено
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(Color.White, CircleShape)
+                            .border(1.dp, Color(0xFFD1D5DB), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.PersonOutline,
+                            contentDescription = "Не призначено",
+                            tint = Color(0xFF9CA3AF),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }
@@ -206,7 +246,7 @@ private fun getPriorityTextColor(priority: String): Color = when (priority.lower
     else -> Color(0xFF4B5563)
 }
 
-// НОВА УТИЛІТА ДЛЯ ФОРМАТУВАННЯ ДАТИ
+// УТИЛІТА ДЛЯ ФОРМАТУВАННЯ ДАТИ
 private fun formatDate(dateString: String?): String {
     if (dateString.isNullOrBlank()) return "Без дати"
     return try {
