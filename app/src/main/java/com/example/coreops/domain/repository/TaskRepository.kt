@@ -1,6 +1,8 @@
 package com.example.coreops.domain.repository
 
+import com.example.coreops.data.remote.models.ChecklistDto
 import com.example.coreops.data.remote.models.CommentDto
+import com.example.coreops.data.remote.models.HistoryEventDto
 import com.example.coreops.data.remote.models.PaginatedResponse
 import com.example.coreops.data.remote.models.TaskDto
 import com.example.coreops.data.remote.models.SprintDto
@@ -43,4 +45,8 @@ interface TaskRepository {
     ): Result<PaginatedResponse<TaskDto>>
 
     suspend fun getActiveSprint(projectId: Int): Result<List<SprintDto>>
+
+    suspend fun getTaskHistory(taskId: Int, cursor: String? = null): Result<PaginatedResponse<HistoryEventDto>>
+    suspend fun addChecklistItem(taskId: Int, content: String): Result<ChecklistDto>
+    suspend fun updateChecklistItemStatus(checklistId: Int, isCompleted: Boolean): Result<ChecklistDto>
 }

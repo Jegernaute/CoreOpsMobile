@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.coreops.data.remote.models.CommentDto
+import com.example.coreops.data.remote.models.HistoryEventDto
 import com.example.coreops.data.remote.models.TaskDto
 import com.example.coreops.domain.TaskSyncManager
 import com.example.coreops.domain.repository.TaskRepository
@@ -17,7 +18,10 @@ import javax.inject.Inject
 
 sealed class TaskDetailState {
     object Loading : TaskDetailState()
-    data class Success(val task: TaskDto, val comments: List<CommentDto>) : TaskDetailState()
+    data class Success(val task: TaskDto,
+                       val comments: List<CommentDto>,
+                       val history: List<HistoryEventDto>
+    ) : TaskDetailState()
     data class Error(val message: String) : TaskDetailState()
 }
 
@@ -37,30 +41,44 @@ class TaskDetailViewModel @Inject constructor(
     private val taskId: Int? = savedStateHandle.get<Int>("taskId")
 
     init {
-        taskId?.let { loadTaskAndComments(it) }
+        taskId?.let { loadFullTaskData(it) }
     }
 
-    fun loadTaskAndComments(taskId: Int) {
+    fun loadFullTaskData(id: Int) {
         viewModelScope.launch {
             _state.value = TaskDetailState.Loading
 
-            val taskResult = repository.getTaskById(taskId)
-            val commentsResult = repository.getTaskComments(taskId, cursor = null)
+            // Завантажує все паралельно
+            val taskResult = repository.getTaskById(id)
+            val commentsResult = repository.getTaskComments(id)
+            val historyResult = repository.getTaskHistory(id)
 
-            if (taskResult.isSuccess && commentsResult.isSuccess) {
+            if (taskResult.isSuccess) {
                 val task = taskResult.getOrThrow()
-                val commentsResponse = commentsResult.getOrThrow()
 
                 _state.value = TaskDetailState.Success(
                     task = task,
-                    comments = commentsResponse.results
+                    comments = commentsResult.getOrNull()?.results ?: emptyList(),
+                    history = historyResult.getOrNull()?.results ?: emptyList()
                 )
             } else {
-                val errorMsg = taskResult.exceptionOrNull()?.message
-                    ?: commentsResult.exceptionOrNull()?.message
-                    ?: "Помилка завантаження даних"
-                _state.value = TaskDetailState.Error(errorMsg)
+                _state.value = TaskDetailState.Error(taskResult.exceptionOrNull()?.message ?: "Помилка")
             }
+        }
+    }
+
+    fun toggleChecklistItem(checklistId: Int, isCompleted: Boolean) {
+        viewModelScope.launch {
+            repository.updateChecklistItemStatus(checklistId, !isCompleted)
+                .onSuccess { if (taskId != null) loadFullTaskData(taskId) }
+        }
+    }
+
+    fun addChecklistItem(content: String) {
+        if (taskId == null) return
+        viewModelScope.launch {
+            repository.addChecklistItem(taskId, content)
+                .onSuccess { loadFullTaskData(taskId) }
         }
     }
 
@@ -105,7 +123,7 @@ class TaskDetailViewModel @Inject constructor(
             }
             result.onFailure { error ->
                 println("Помилка оновлення статусу: ${error.message}")
-                loadTaskAndComments(taskId)
+                loadFullTaskData(taskId)
             }
         }
     }

@@ -1,26 +1,53 @@
 package com.example.coreops.ui.tasks
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.coreops.data.remote.models.ChecklistDto
 import com.example.coreops.data.remote.models.CommentDto
+import com.example.coreops.data.remote.models.HistoryEventDto
 import com.example.coreops.data.remote.models.TaskDto
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.DirectionsRun
-import androidx.compose.material.icons.filled.Schedule
+import com.example.coreops.data.remote.models.ResourceDto
+import com.example.coreops.data.remote.models.UserDetailsDto
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 @Composable
 fun TaskDetailScreen(
     viewModel: TaskDetailViewModel = hiltViewModel(),
@@ -41,7 +68,10 @@ fun TaskDetailScreen(
                 )
             }
         },
-        onSendComment = { text -> viewModel.sendComment(text) }
+        onSendComment = { text -> viewModel.sendComment(text) },
+        onToggleChecklist = { checklistId, isCompleted ->
+            viewModel.toggleChecklistItem(checklistId, isCompleted)
+        }
     )
 }
 
@@ -52,50 +82,60 @@ fun TaskDetailContent(
     isSending: Boolean,
     onNavigateBack: () -> Unit,
     onStatusChange: (String) -> Unit,
-    onSendComment: (String) -> Unit
+    onSendComment: (String) -> Unit,
+    onToggleChecklist: (Int, Boolean) -> Unit
 ) {
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+
     Scaffold(
         containerColor = Color(0xFFF3F4F6),
         topBar = {
-            // Кастомна шапка без подвійних системних відступів
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+                    .background(Color(0xFFF3F4F6))
+                    .padding(horizontal = 8.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Ліва кнопка "Назад"
-                IconButton(
-                    onClick = onNavigateBack,
-                    modifier = Modifier.size(48.dp) // Стандартна зона натискання
-                ) {
+                IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Назад",
-                        modifier = Modifier.size(28.dp),
                         tint = Color.Black
                     )
                 }
 
-                // Заголовок по центру
+                val titleText = if (state is TaskDetailState.Success) {
+                    state.task.taskKey ?: "Деталі задачі"
+                } else "Завантаження..."
+
                 Text(
-                    text = "Деталі задачі",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black,
+                    text = titleText,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF4B5563),
                     modifier = Modifier.weight(1f),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.width(48.dp))
+                IconButton(onClick = { /* TODO: Опції */ }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Опції",
+                        tint = Color.Black
+                    )
+                }
             }
         },
-
         bottomBar = {
-            if (state is TaskDetailState.Success) {
-                CommentInputBar(
+            if (state is TaskDetailState.Success && selectedTabIndex == 0) {
+                ChatInputBar(
                     isSending = isSending,
-                    onSendComment = onSendComment
+                    onSendComment = onSendComment,
+                    onAttachFile = { uri ->
+                        Toast.makeText(context, "Вибрано файл: $uri", Toast.LENGTH_SHORT).show()
+                    }
                 )
             }
         }
@@ -104,6 +144,11 @@ fun TaskDetailContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .background(
+                    color = Color.White,
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+                )
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
         ) {
             when (state) {
                 is TaskDetailState.Loading -> {
@@ -120,184 +165,541 @@ fun TaskDetailContent(
                     )
                 }
                 is TaskDetailState.Success -> {
-                    TaskDetailBody(
-                        task = state.task,
-                        comments = state.comments,
-                        onStatusChange = onStatusChange
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun TaskDetailBody(
-    task: TaskDto,
-    comments: List<CommentDto>,
-    onStatusChange: (String) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // --- БЛОК 1: НАЗВА ТА СТАТУС ---
-        Text(
-            text = task.title,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
-
-        StatusDropdown(
-            currentStatus = task.status,
-            onStatusChange = onStatusChange
-        )
-
-        // =======================================================
-        //  НОВИЙ БЛОК ПЛАНУВАННЯ (З'являється тільки якщо є дані)
-        // =======================================================
-        if (task.dueDate != null || task.sprint != null || task.estimatedHours != null) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFE0F2FE)), // Легкий блакитний фон
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text("Планування", fontWeight = FontWeight.Bold, color = Color(0xFF0284C7), fontSize = 14.sp)
-
-                    // Спринт
-                    if (task.sprint != null) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.DirectionsRun, contentDescription = "Sprint", modifier = Modifier.size(18.dp), tint = Color(0xFF0284C7))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = "Спринт #${task.sprint}", fontSize = 14.sp, color = Color.Black)
-                        }
-                    }
-
-                    // Дедлайн
-                    if (task.dueDate != null) {
-                        val formattedDate = task.dueDate.take(10) // YYYY-MM-DD
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.DateRange, contentDescription = "Deadline", modifier = Modifier.size(18.dp), tint = Color.Red.copy(alpha = 0.8f))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = "Дедлайн: $formattedDate", fontSize = 14.sp, color = Color.Black, fontWeight = FontWeight.Medium)
-                        }
-                    }
-
-                    // Оцінка та витрачений час
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(top = 24.dp, bottom = 16.dp)
                     ) {
-                        if (task.estimatedHours != null) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Schedule, contentDescription = "Estimate", modifier = Modifier.size(18.dp), tint = Color.Gray)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(text = "Оцінка: ${task.estimatedHours} год", fontSize = 14.sp, color = Color.Black)
+                        item {
+                            TaskHeader(
+                                task = state.task,
+                                onStatusChange = onStatusChange
+                            )
+                        }
+
+                        if (state.task.checklist.isNotEmpty()) {
+                            item {
+                                ChecklistSection(
+                                    checklist = state.task.checklist,
+                                    onToggle = onToggleChecklist
+                                )
+                            }
+                        }
+
+                        item {
+                            AttachmentsSection(resources = state.task.resources)
+                        }
+
+                        item {
+                            TabsSection(
+                                selectedTabIndex = selectedTabIndex,
+                                commentsCount = state.comments.size,
+                                onTabSelected = { selectedTabIndex = it }
+                            )
+                        }
+
+                        if (selectedTabIndex == 0) {
+                            if (state.comments.isEmpty()) {
+                                item {
+                                    Text(
+                                        text = "Немає коментарів",
+                                        color = Color.Gray,
+                                        modifier = Modifier.padding(16.dp)
+                                    )
+                                }
+                            } else {
+                                items(state.comments) { comment ->
+                                    CommentBubble(comment = comment)
+                                }
+                            }
+                        } else {
+                            if (state.history.isEmpty()) {
+                                item {
+                                    Text(
+                                        text = "Історія порожня",
+                                        color = Color.Gray,
+                                        modifier = Modifier.padding(16.dp)
+                                    )
+                                }
+                            } else {
+                                items(state.history) { event ->
+                                    HistoryItem(event = event)
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        // =======================================================
-        //  КІНЕЦЬ БЛОКУ ПЛАНУВАННЯ
-        // =======================================================
-
-        // --- БЛОК 2: ОСНОВНІ ДЕТАЛІ ТА ОПИС ---
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Опис:", fontWeight = FontWeight.Bold, color = Color.Gray, fontSize = 14.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = task.description ?: "Опис відсутній", color = Color.Black)
-
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = Color(0xFFE5E7EB))
-                Spacer(modifier = Modifier.height(16.dp))
-
-                DetailRow(label = "Проєкт:", value = "[${task.projectKey}] ${task.projectName}")
-                DetailRow(label = "Виконавець:", value = task.assigneeName ?: "Не призначено")
-                DetailRow(label = "Автор:", value = task.reporterName)
-                DetailRow(label = "Пріоритет:", value = task.priority.uppercase())
-            }
-        }
-
-        // --- БЛОК 3: КОМЕНТАРІ ---
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Коментарі (${comments.size})",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
-
-        if (comments.isEmpty()) {
-            Text(
-                text = "Поки немає коментарів. Напишіть першим!",
-                color = Color.Gray,
-                modifier = Modifier.padding(vertical = 16.dp)
-            )
-        } else {
-            comments.forEach { comment ->
-                CommentItem(comment = comment)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 @Composable
-fun CommentItem(comment: CommentDto) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = Modifier.fillMaxWidth()
+fun TaskHeader(
+    task: TaskDto,
+    onStatusChange: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        // Заголовок
+        Text(
+            text = task.title,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF111827),
+            lineHeight = 28.sp
+        )
+
+        // Теги (Статус, Пріоритет, Тип)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            StatusPillDropdown(
+                currentStatus = task.status,
+                onStatusChange = onStatusChange
+            )
+            TagPill(
+                text = task.priority.replaceFirstChar { it.uppercase() },
+                containerColor = Color(0xFFFEE2E2),
+                textColor = Color(0xFFDC2626)
+            )
+            TagPill(
+                text = task.taskType.replaceFirstChar { it.uppercase() },
+                containerColor = Color(0xFFEEF2FF),
+                textColor = Color(0xFF4F46E5)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Сітка: Виконавець / Автор
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Виконавець", fontSize = 12.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.height(4.dp))
+                UserRowItem(user = task.assigneeDetails, fallbackName = task.assigneeName)
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Автор", fontSize = 12.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.height(4.dp))
+                UserRowItem(user = task.reporterDetails, fallbackName = task.reporterName)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Сітка: Дедлайн / Спринт
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Дедлайн", fontSize = 12.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Gray)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = task.dueDate?.take(10) ?: "Не вказано",
+                        fontSize = 14.sp,
+                        color = Color.Black
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Спринт", fontSize = 12.sp, color = Color.Gray)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Gray) // ВИПРАВЛЕНО
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = task.sprintName ?: task.sprint?.let { "Sprint $it" } ?: "Немає",
+                        fontSize = 14.sp,
+                        color = Color.Black
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Опис
+        Column {
+            Text("Опис", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = task.description ?: "Опис відсутній",
+                fontSize = 14.sp,
+                color = Color(0xFF4B5563),
+                lineHeight = 20.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun UserRowItem(user: UserDetailsDto?, fallbackName: String?) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val avatarUrl = user?.avatar
+
+        if (!avatarUrl.isNullOrEmpty()) {
+            coil.compose.AsyncImage(
+                model = avatarUrl,
+                contentDescription = "Аватар користувача",
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+            )
+        } else {
+            // Плейсхолдер для аватарки
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE5E7EB)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Text(
+            text = user?.name ?: fallbackName ?: "Не призначено",
+            fontSize = 14.sp,
+            color = Color.Black,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+fun ChecklistSection(
+    checklist: List<ChecklistDto>,
+    onToggle: (Int, Boolean) -> Unit
+) {
+    val completedCount = checklist.count { it.isCompleted }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Підзадачі", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            Text("$completedCount/${checklist.size}", fontSize = 14.sp, color = Color.Gray)
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        checklist.forEach { item ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggle(item.id, item.isCompleted) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (item.isCompleted) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = "Done", tint = Color(0xFF3B82F6), modifier = Modifier.size(20.dp))
+                } else {
+                    Icon(Icons.Outlined.Circle, contentDescription = "Todo", tint = Color(0xFFD1D5DB), modifier = Modifier.size(20.dp))
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = item.content,
+                    fontSize = 14.sp,
+                    color = if (item.isCompleted) Color.Gray else Color.Black,
+                    textDecoration = if (item.isCompleted) androidx.compose.ui.text.style.TextDecoration.LineThrough else null
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AttachmentsSection(resources: List<ResourceDto>) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text("Вкладення та лінки", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (resources.isEmpty()) {
+            Text(
+                text = "Наразі до завдання не додано жодних файлів чи посилань",
+                fontSize = 14.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        } else {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(resources) { resource ->
+                    // Визначає правильне посилання за логікою бекенду
+                    val targetLink = resource.file ?: resource.url
+
+                    if (targetLink.isNullOrBlank()) return@items // Якщо і те, і те порожнє - пропускає
+
+                    // Визначає чи це файл за resourceType або розширенням
+                    val isFile = resource.resourceType == "file" || resource.fileExtension != null
+
+                    val icon = if (isFile) Icons.Default.InsertDriveFile else Icons.Default.Link
+                    val iconBg = if (isFile) Color(0xFFE0F2FE) else Color(0xFFEEF2FF)
+                    val iconTint = if (isFile) Color(0xFF0284C7) else Color(0xFF4F46E5)
+
+                    val title = if (!resource.name.isNullOrBlank()) {
+                        resource.name
+                    } else {
+                        if (isFile) "Вкладений файл" else "Зовнішнє посилання"
+                    }
+
+                    val subtitle = if (isFile) {
+                        val sizeKb = (resource.fileSize ?: 0L) / 1024
+                        val sizeText = if (sizeKb > 1024) "${sizeKb / 1024} MB" else "$sizeKb KB"
+                        val ext = resource.fileExtension?.uppercase() ?: "FILE"
+                        "$ext • $sizeText"
+                    } else {
+                        if (targetLink.isNotBlank()) {
+                            try {
+                                java.net.URI(targetLink).host?.removePrefix("www.") ?: "веб-посилання"
+                            } catch (e: Exception) {
+                                "веб-посилання"
+                            }
+                        } else {
+                            "веб-посилання"
+                        }
+                    }
+
+                    AttachmentCard(
+                        icon = icon,
+                        title = title,
+                        subtitle = subtitle,
+                        iconBg = iconBg,
+                        iconTint = iconTint,
+                        onClick = {
+                            try {
+                                // Підміна localhost для емулятора
+                                val fixedUrl = targetLink
+                                    .replace("127.0.0.1", "10.0.2.2")
+                                    .replace("localhost", "10.0.2.2")
+
+                                val validUrl = if (!fixedUrl.startsWith("http://") && !fixedUrl.startsWith("https://")) {
+                                    "http://$fixedUrl"
+                                } else {
+                                    fixedUrl
+                                }
+
+                                Log.d("AttachmentClick", "Відкриваємо: $validUrl")
+
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(validUrl))
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Log.e("AttachmentClick", "Помилка Intent", e)
+                                Toast.makeText(context, "Помилка: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+@Composable
+fun AttachmentCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    iconBg: Color,
+    iconTint: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .padding(12.dp)
+            .widthIn(min = 160.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp)).background(iconBg),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(title, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.Black)
+            Text(subtitle, fontSize = 11.sp, color = Color.Gray)
+        }
+    }
+}
+
+@Composable
+fun TabsSection(
+    selectedTabIndex: Int,
+    commentsCount: Int,
+    onTabSelected: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp)
+    ) {
+        TabItem(
+            title = "Коментарі ($commentsCount)",
+            isSelected = selectedTabIndex == 0,
+            onClick = { onTabSelected(0) }
+        )
+        TabItem(
+            title = "Історія",
+            isSelected = selectedTabIndex == 1,
+            onClick = { onTabSelected(1) }
+        )
+    }
+    HorizontalDivider(color = Color(0xFFE5E7EB), thickness = 1.dp)
+}
+
+@Composable
+fun TabItem(title: String, isSelected: Boolean, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = title,
+            fontSize = 14.sp,
+            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+            color = if (isSelected) Color(0xFF2563EB) else Color.Gray
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        if (isSelected) {
+            Box(
+                modifier = Modifier
+                    .height(2.dp)
+                    .fillMaxWidth(0.8f)
+                    .background(Color(0xFF2563EB))
+            )
+        } else {
+            Spacer(modifier = Modifier.height(2.dp))
+        }
+    }
+}
+
+@Composable
+fun CommentBubble(comment: CommentDto) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        // Аватар
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFD1D5DB)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            // Ім'я та час
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = comment.authorName ?: "Невідомий автор",
-                    fontWeight = FontWeight.Bold,
+                    text = comment.authorName ?: "Невідомий",
                     fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
                     color = Color.Black
                 )
                 Text(
-                    text = comment.createdAt.take(10),
-                    color = Color.Gray,
-                    fontSize = 12.sp
+                    text = comment.createdAt.takeLast(8).take(5),
+                    fontSize = 12.sp,
+                    color = Color.Gray
                 )
             }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(text = comment.content, fontSize = 14.sp, color = Color.DarkGray)
+            Spacer(modifier = Modifier.height(4.dp))
+            // Бабл коментаря
+            Box(
+                modifier = Modifier
+                    .background(
+                        color = Color(0xFFF3F4F6),
+                        shape = RoundedCornerShape(
+                            topStart = 0.dp,
+                            topEnd = 12.dp,
+                            bottomEnd = 12.dp,
+                            bottomStart = 12.dp
+                        )
+                    )
+                    .padding(12.dp)
+            ) {
+                Text(text = comment.content, fontSize = 14.sp, color = Color.Black, lineHeight = 20.sp)
+            }
         }
     }
 }
 
 @Composable
-fun CommentInputBar(
+fun HistoryItem(event: HistoryEventDto) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = "${event.actor.name} - ${event.actionType}",
+            fontSize = 14.sp,
+            color = Color.Black
+        )
+        Text(
+            text = event.timestamp.take(16).replace("T", " "),
+            fontSize = 12.sp,
+            color = Color.Gray
+        )
+    }
+}
+
+@Composable
+fun ChatInputBar(
     isSending: Boolean,
-    onSendComment: (String) -> Unit
+    onSendComment: (String) -> Unit,
+    onAttachFile: (Uri) -> Unit
 ) {
     var text by remember { mutableStateOf("") }
 
+    // Лаунчер для відкриття системного файлового менеджера
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        // Якщо користувач вибрав файл (uri != null) передає його далі
+        uri?.let { onAttachFile(it) }
+    }
+
     Surface(
         color = Color.White,
-        shadowElevation = 8.dp,
+        shadowElevation = 4.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -308,94 +710,108 @@ fun CommentInputBar(
                 .imePadding(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Написати коментар...", color = Color.Gray) },
-                maxLines = 3,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFF3F4F6),
-                    unfocusedContainerColor = Color(0xFFF3F4F6),
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent
-                )
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Button(
-                onClick = {
-                    if (text.isNotBlank()) {
-                        onSendComment(text)
-                        text = ""
-                    }
-                },
-                enabled = !isSending && text.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
-                contentPadding = PaddingValues(horizontal = 16.dp)
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(24.dp))
+                    .padding(horizontal = 12.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (isSending) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text("Надіслати", color = Color.White, fontWeight = FontWeight.Bold)
+                Icon(
+                    imageVector = Icons.Default.AttachFile,
+                    contentDescription = "Прикріпити",
+                    tint = Color.Gray,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable {
+                            // Запускає вибір файлу. "*/*" означає будь-який формат.
+                            filePickerLauncher.launch("*/*")
+                        }
+                )
+
+                TextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    placeholder = { Text("Написати коментар...", color = Color.Gray, fontSize = 14.sp) },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+
+                IconButton(
+                    onClick = {
+                        if (text.isNotBlank()) {
+                            onSendComment(text)
+                            text = ""
+                        }
+                    },
+                    enabled = !isSending && text.isNotBlank()
+                ) {
+                    if (isSending) {
+                        CircularProgressIndicator(color = Color(0xFF2563EB), modifier = Modifier.size(20.dp))
+                    } else {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Надіслати",
+                            tint = if (text.isNotBlank()) Color(0xFF2563EB) else Color.Gray
+                        )
+                    }
                 }
             }
         }
     }
 }
-
-
 @Composable
-fun DetailRow(label: String, value: String) {
-    Row(
+fun TagPill(text: String, containerColor: Color, textColor: Color) {
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+            .background(color = containerColor, shape = RoundedCornerShape(8.dp))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
-        Text(text = label, color = Color.Gray, fontSize = 14.sp)
-        Text(text = value, color = Color.Black, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+        Text(text = text, color = textColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatusDropdown(
+fun StatusPillDropdown(
     currentStatus: String,
     onStatusChange: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     val statuses = listOf(
         "to_do" to "До виконання",
-        "in_progress" to "В процесі",
+        "in_progress" to "В роботі",
         "review" to "На перевірці",
         "done" to "Готово"
     )
     val currentLabel = statuses.find { it.first == currentStatus }?.second ?: currentStatus
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded }
-    ) {
-        OutlinedTextField(
-            value = currentLabel,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Статус задачі") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.White,
-                unfocusedContainerColor = Color.White
-            ),
-            modifier = Modifier.menuAnchor().fillMaxWidth()
-        )
-        ExposedDropdownMenu(
+    val bgColor = if (currentStatus == "in_progress") Color(0xFFFEF3C7) else Color(0xFFF3F4F6)
+    val textColor = if (currentStatus == "in_progress") Color(0xFFD97706) else Color(0xFF4B5563)
+
+    Box {
+        Row(
+            modifier = Modifier
+                .background(color = bgColor, shape = RoundedCornerShape(8.dp))
+                .clickable { expanded = true }
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = currentLabel, color = textColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = "Змінити статус",
+                tint = textColor,
+                modifier = Modifier.size(18.dp).padding(start = 2.dp)
+            )
+        }
+
+        DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
             modifier = Modifier.background(Color.White)

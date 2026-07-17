@@ -536,11 +536,16 @@ fun ProjectTasksScreenPreview() {
     val mockTasks = listOf(
         TaskDto(
             id = 1,
+            taskKey = "MOB-1",
             title = "Оновити дизайн екрану задач",
             description = null,
             status = "to_do",
             priority = "high",
             taskType = "feature",
+            assigneeDetails = null,
+            reporterDetails = null,
+            checklist = emptyList(),
+            resources = emptyList(),
             assigneeName = "Іван",
             assigneeAvatar = null,
             reporterName = "Tech Lead",
@@ -551,13 +556,14 @@ fun ProjectTasksScreenPreview() {
             resourcesCount = 1,
             estimatedHours = 4.5f,
             dueDate = "2026-07-15",
-            sprint = null
+            sprint = null,
+            sprintName = "Sprint 42"
         )
     )
 
     MaterialTheme {
         ProjectTasksContent(
-            state = ProjectTasksState.Success(mockTasks),
+            state = ProjectTasksState.Success(tasks = mockTasks, projectName = "CoreOps Mobile", activeSprintName = "Sprint 42"),
             tabs = listOf("Усі", "До виконання", "В роботі", "На перевірці", "Готово"),
             selectedTabIndex = 0,
             onTabSelected = {},

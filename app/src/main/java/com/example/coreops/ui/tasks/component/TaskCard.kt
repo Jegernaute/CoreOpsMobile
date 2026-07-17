@@ -149,7 +149,7 @@ fun TaskCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = (task.assigneeName ?: task.reporterName).take(1).uppercase(),
+                        text = (task.assigneeName ?: task.reporterName ?: "?").take(1).uppercase(),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF374151)
@@ -242,11 +242,16 @@ private fun formatDate(dateString: String?): String {
 fun PreviewTaskCardBug() {
     val mockTask = TaskDto(
         id = 12,
+        taskKey = "CORE-12",
         title = "Критична вразливість в модулі авторизації",
         description = null,
         status = "to_do",
         priority = "critical",
         taskType = "bug",
+        assigneeDetails = null,
+        reporterDetails = null,
+        checklist = emptyList(),
+        resources = emptyList(),
         assigneeName = "Олександр",
         assigneeAvatar = null,
         reporterName = "QA",
@@ -256,7 +261,8 @@ fun PreviewTaskCardBug() {
         commentsCount = 14,
         resourcesCount = 3,
         estimatedHours = 4f,
-        dueDate = "2026-07-01"
+        dueDate = "2026-07-01",
+        sprintName = null
     )
     Box(modifier = Modifier.padding(16.dp)) {
         TaskCard(task = mockTask, onClick = {})
@@ -268,11 +274,16 @@ fun PreviewTaskCardBug() {
 fun PreviewTaskCardFeature() {
     val mockTask = TaskDto(
         id = 45,
+        taskKey = "CORE-45",
         title = "Додати підтримку темної теми",
         description = null,
         status = "in_progress",
         priority = "medium",
         taskType = "feature",
+        assigneeDetails = null,
+        reporterDetails = null,
+        checklist = emptyList(),
+        resources = emptyList(),
         assigneeName = null,
         assigneeAvatar = null,
         reporterName = "Марія",
@@ -282,7 +293,8 @@ fun PreviewTaskCardFeature() {
         commentsCount = 5,
         resourcesCount = 0,
         estimatedHours = 12f,
-        dueDate = "2026-07-15"
+        dueDate = "2026-07-15",
+        sprintName = "Sprint 2"
     )
     Box(modifier = Modifier.padding(16.dp)) {
         TaskCard(task = mockTask, onClick = {})
@@ -294,11 +306,16 @@ fun PreviewTaskCardFeature() {
 fun PreviewTaskCardTask() {
     val mockTask = TaskDto(
         id = 89,
+        taskKey = "CORE-89",
         title = "Оновити документацію API до версії 2.0",
         description = null,
         status = "done",
         priority = "low",
         taskType = "task",
+        assigneeDetails = null,
+        reporterDetails = null,
+        checklist = emptyList(),
+        resources = emptyList(),
         assigneeName = "Іван",
         assigneeAvatar = null,
         reporterName = "Tech Lead",
@@ -308,7 +325,8 @@ fun PreviewTaskCardTask() {
         commentsCount = 105,
         resourcesCount = 0,
         estimatedHours = 8f,
-        dueDate = null
+        dueDate = null,
+        sprintName = null
     )
     Box(modifier = Modifier.padding(16.dp)) {
         TaskCard(task = mockTask, onClick = {})

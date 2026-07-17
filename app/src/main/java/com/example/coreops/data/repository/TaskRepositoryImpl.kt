@@ -9,6 +9,10 @@ import com.example.coreops.data.remote.models.TaskDto
 import com.example.coreops.data.remote.models.TaskStatusUpdateRequest
 import com.example.coreops.domain.repository.TaskRepository
 import javax.inject.Inject
+import com.example.coreops.data.remote.models.ChecklistDto
+import com.example.coreops.data.remote.models.HistoryEventDto
+import com.example.coreops.data.remote.models.CreateChecklistItemRequest
+import com.example.coreops.data.remote.models.UpdateChecklistItemRequest
 
 /**
  * Фізична реалізація репозиторію, яка ходить у мережу за задачами.
@@ -134,4 +138,34 @@ class TaskRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    override suspend fun getTaskHistory(taskId: Int, cursor: String?): Result<PaginatedResponse<HistoryEventDto>> {
+        return try {
+            val response = api.getTaskHistory(taskId, cursor)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun addChecklistItem(taskId: Int, content: String): Result<ChecklistDto> {
+        return try {
+            val request = CreateChecklistItemRequest(task = taskId, content = content)
+            val response = api.addChecklistItem(request)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun updateChecklistItemStatus(checklistId: Int, isCompleted: Boolean): Result<ChecklistDto> {
+        return try {
+            val request = UpdateChecklistItemRequest(isCompleted = isCompleted)
+            val response = api.updateChecklistItemStatus(checklistId, request)
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 }

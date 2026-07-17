@@ -1,12 +1,16 @@
 package com.example.coreops.data.remote.api
 
+import com.example.coreops.data.remote.models.ChecklistDto
 import com.example.coreops.data.remote.models.CommentDto
 import com.example.coreops.data.remote.models.CommentRequest
+import com.example.coreops.data.remote.models.CreateChecklistItemRequest
 import com.example.coreops.data.remote.models.CreateTaskRequest
+import com.example.coreops.data.remote.models.HistoryEventDto
 import com.example.coreops.data.remote.models.PaginatedResponse
 import com.example.coreops.data.remote.models.SprintDto
 import com.example.coreops.data.remote.models.TaskDto
 import com.example.coreops.data.remote.models.TaskStatusUpdateRequest
+import com.example.coreops.data.remote.models.UpdateChecklistItemRequest
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
@@ -103,4 +107,30 @@ interface TasksApi {
         @Query("project") projectId: Int,
         @Query("status") status: String
     ): PaginatedResponse<SprintDto>
+
+    /**
+     * Отримання історії задачі.
+     */
+    @GET("api/v1/tasks/history/")
+    suspend fun getTaskHistory(
+        @Query("task") taskId: Int,
+        @Query("cursor") cursor: String? = null
+    ): PaginatedResponse<HistoryEventDto>
+
+    /**
+     * Додавання пункту чекліста.
+     */
+    @POST("api/v1/tasks/checklists/")
+    suspend fun addChecklistItem(
+        @Body request: CreateChecklistItemRequest
+    ): ChecklistDto
+
+    /**
+     * Оновлення стану пункту чекліста.
+     */
+    @PATCH("api/v1/tasks/checklists/{checklist_id}/")
+    suspend fun updateChecklistItemStatus(
+        @Path("checklist_id") checklistId: Int,
+        @Body request: UpdateChecklistItemRequest
+    ): ChecklistDto
 }
