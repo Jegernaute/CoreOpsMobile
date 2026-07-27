@@ -5,11 +5,13 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * AuthPreferences — безпечне сховище для токенів та облікових даних.
  * Використовує In-Memory кешування для миттєвого доступу без блокування потоків (I/O).
  */
+@Singleton
 class AuthPreferences @Inject constructor(context: Context) {
 
     private val prefs: SharedPreferences

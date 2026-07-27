@@ -4,10 +4,12 @@ import com.example.coreops.data.local.AuthPreferences
 import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
+import javax.inject.Singleton
 /**
  * Перехоплювач мережевих запитів.
  * Призначений для автоматичного підставлення токена авторизації у заголовок запиту.
  */
+@Singleton
 class AuthInterceptor @Inject constructor(
     private val authPreferences: AuthPreferences
 ) : Interceptor {
